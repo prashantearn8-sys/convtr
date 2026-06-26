@@ -20,19 +20,7 @@ export interface AIResponse {
 
 export type ActiveTab = "image" | "code" | "minifier";
 
-export type RetroView = "home" | "compress_img" | "compress_pdf" | "convert_img" | "image_to_pdf" | "merge_pdf" | "history" | "privacy" | "terms";
-
-export interface HistoryItem {
-  id: string;
-  filename: string;
-  originalName: string;
-  type: "image" | "pdf" | "code" | "document";
-  originalSize: number;
-  compressedSize: number;
-  url: string;
-  format: string;
-  timestamp: string;
-}
+export type RetroView = "home" | "compress_img" | "compress_pdf" | "convert_img" | "image_to_pdf" | "merge_pdf" | "privacy" | "terms";
 
 export type ImageFormat = "image/png" | "image/jpeg" | "image/webp" | "image/bmp";
 

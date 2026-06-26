@@ -29,7 +29,7 @@ import {
   RotateCw,
   RotateCcw
 } from "lucide-react";
-import { RetroView, HistoryItem, ImageFormat } from "./types";
+import { RetroView, ImageFormat } from "./types";
 import { formatBytes, compressToTargetSizeKB, processImageClientSide } from "./utils/imageProcessor";
 import { PDFDocument } from "pdf-lib";
 
@@ -50,11 +50,7 @@ export default function App() {
   const [legalSearch, setLegalSearch] = useState<string>("");
   const darkMode = true;
   
-  // History logs (loaded from/persisted to localStorage)
-  const [history, setHistory] = useState<HistoryItem[]>(() => {
-    const saved = localStorage.getItem("mono_transcoder_history_v2");
-    return saved ? JSON.parse(saved) : [];
-  });
+
 
   // ==========================================
   // [02] COMPRESS_IMG.PRG STATES
@@ -139,10 +135,7 @@ export default function App() {
   const [imageToPdfIsProcessing, setImageToPdfIsProcessing] = useState<boolean>(false);
   const imageToPdfInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync state to local storage
-  useEffect(() => {
-    localStorage.setItem("mono_transcoder_history_v2", JSON.stringify(history));
-  }, [history]);
+
 
   // Live retro clock update
   useEffect(() => {
@@ -487,7 +480,7 @@ export default function App() {
 
 
 
-  // Log to history and download
+  // Download helper
   const saveAndDownload = (
     url: string,
     finalName: string,
@@ -526,41 +519,7 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    // Save log
-    const newLog: HistoryItem = {
-      id: "log-" + Date.now(),
-      filename: downloadName,
-      originalName: originalName,
-      type: fileType,
-      originalSize: originalSize,
-      compressedSize: compressedSize,
-      url: url,
-      format: format,
-      timestamp: new Date().toISOString().replace("T", " ").substring(0, 16)
-    };
-
-    setHistory((prev) => [newLog, ...prev]);
   };
-
-  const clearLog = (id: string) => {
-    setHistory((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  // Filter history based on search query
-  const filteredHistory = history.filter((item) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      item.filename.toLowerCase().includes(q) ||
-      item.originalName.toLowerCase().includes(q) ||
-      item.format.toLowerCase().includes(q)
-    );
-  });
-
-  const totalSavedBytes = history.reduce((sum, item) => {
-    const saved = item.originalSize - item.compressedSize;
-    return saved > 0 ? sum + saved : sum;
-  }, 0);
 
   return (
     <div 
@@ -590,8 +549,8 @@ export default function App() {
       </header>
 
       {/* CORE CONTROL DECK VIEW SWITCHER */}
-      <nav className="border-b-3 border-black bg-zinc-50 dark:bg-zinc-900 py-3 px-4 md:px-8 shrink-0">
-        <div className="max-w-7xl mx-auto flex flex-wrap gap-2 justify-start">
+      <nav className="border-b-3 border-black bg-zinc-50 dark:bg-zinc-900 py-3 px-4 md:px-8 shrink-0 overflow-x-auto scrollbar-none">
+        <div className="max-w-7xl mx-auto flex flex-nowrap sm:flex-wrap gap-2 justify-start min-w-max sm:min-w-0">
           <button
             onClick={() => { setCurrentView("home"); }}
             className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer ${
@@ -652,16 +611,7 @@ export default function App() {
           >
             MERGE_PDF
           </button>
-          <button
-            onClick={() => { setCurrentView("history"); }}
-            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer ${
-              currentView === "history"
-                ? "bg-black text-white shadow-[2px_2px_0_0_#000000]"
-                : "bg-white text-black hover:bg-zinc-100"
-            }`}
-          >
-            HIST_LOG ({history.length})
-          </button>
+
         </div>
       </nav>
 
@@ -676,7 +626,7 @@ export default function App() {
               <div className="md:col-span-8 relative">
                 <input
                   type="text"
-                  placeholder="SEARCH CHANNELS, FILE TYPES OR RECENT LOG FILES..."
+                  placeholder="SEARCH CHANNELS OR FILE TYPES..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full p-3.5 pl-10 bg-white dark:bg-black border-2 border-black rounded-xl text-xs font-mono placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white"
@@ -684,9 +634,9 @@ export default function App() {
                 <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               </div>
               <div className="md:col-span-4 bg-zinc-100 dark:bg-zinc-900 border-2 border-black p-3 rounded-xl flex items-center justify-between text-xs font-mono">
-                <span className="text-zinc-500 uppercase">LOGGED_ITEMS:</span>
-                <span className="font-bold font-mono text-black dark:text-white">
-                  {history.length} FILES TOTAL
+                <span className="text-zinc-500 uppercase">SYSTEM_STATUS:</span>
+                <span className="font-bold font-mono text-green-600 dark:text-green-400 uppercase flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></span> ONLINE
                 </span>
               </div>
             </div>
@@ -704,7 +654,10 @@ export default function App() {
                 ).map((action) => (
                   <div
                     key={action.id}
-                    className="bg-white dark:bg-black border-2 border-black rounded-xl p-5 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[4px_4px_0px_0px_#000000] dark:hover:shadow-[4px_4px_0px_0px_#ffffff] transition-all flex flex-col justify-between group"
+                    onClick={() => {
+                      setCurrentView(action.view as RetroView);
+                    }}
+                    className="bg-white dark:bg-black border-2 border-black rounded-xl p-5 hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[4px_4px_0px_0px_#000000] dark:hover:shadow-[4px_4px_0px_0px_#ffffff] transition-all flex flex-col justify-between group cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-950/40"
                   >
                     <div>
                       <div className="w-9 h-9 border-2 border-black bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center text-black dark:text-white mb-4">
@@ -722,15 +675,12 @@ export default function App() {
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => {
-                        setCurrentView(action.view as RetroView);
-                      }}
-                      className="w-full text-center py-2 bg-black text-white dark:bg-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-xs font-mono font-bold uppercase border-2 border-black transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    <div
+                      className="w-full text-center py-2 bg-black text-white dark:bg-white dark:text-black group-hover:bg-zinc-800 dark:group-hover:bg-zinc-200 text-xs font-mono font-bold uppercase border-2 border-black transition-colors flex items-center justify-center gap-1"
                     >
                       <span>LAUNCH_PROGRAM</span>
                       <ArrowRight className="w-3 h-3" />
-                    </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -778,62 +728,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Quick preview of history logs if any exist */}
-            {history.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-bold font-mono text-zinc-500 uppercase tracking-widest">
-                    // RECENT TRANSCRIPTION LOGS
-                  </h3>
-                  <button 
-                    onClick={() => setCurrentView("history")} 
-                    className="text-xs font-mono font-bold uppercase underline hover:text-zinc-500"
-                  >
-                    View Timeline &gt;
-                  </button>
-                </div>
-                
-                <div className="border-2 border-black rounded-xl divide-y-2 divide-black overflow-hidden bg-white dark:bg-black font-mono text-xs">
-                  {history.slice(0, 3).map((item) => {
-                    const savedBytes = item.originalSize - item.compressedSize;
-                    const percent = Math.round((savedBytes / item.originalSize) * 100);
-                    return (
-                      <div key={item.id} className="p-3.5 flex flex-wrap items-center justify-between gap-4 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <span className="p-1.5 border border-black bg-zinc-100 dark:bg-zinc-900 uppercase text-[9px] font-bold">
-                            {item.type}
-                          </span>
-                          <div>
-                            <p className="font-sans font-bold text-black dark:text-white truncate max-w-[200px] sm:max-w-xs">{item.filename}</p>
-                            <span className="text-[10px] text-zinc-400">ORIGINAL: {item.originalName}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <p className="font-bold text-black dark:text-white">
-                              {formatBytes(item.compressedSize)}
-                            </p>
-                            <p className="text-[10px] text-zinc-500">
-                              WAS: {formatBytes(item.originalSize)} ({percent > 0 ? `-${percent}%` : "0%"})
-                            </p>
-                          </div>
-                          
-                          <a
-                            href={item.url === "#" ? undefined : item.url}
-                            download={item.filename}
-                            onClick={() => item.url === "#" && alert("This historical mock log item URL is for UI display. Newly converted files are fully downloadable!")}
-                            className="p-1 border border-black bg-white text-black hover:bg-black hover:text-white font-bold text-[10px] uppercase cursor-pointer"
-                          >
-                            [DOWNLOAD_AGAIN]
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+
           </div>
         )}
 
@@ -2327,105 +2222,7 @@ export default function App() {
 
 
 
-        {/* VIEW 4: TRANSACTION LOGS / HISTORY SCREEN */}
-        {currentView === "history" && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex justify-between items-center border-b border-black pb-4">
-              <div>
-                <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
-                  TRANSACTION HISTORY LOG
-                </h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                  Read-only journal of optimized storage pipelines and cached conversion streams.
-                </p>
-              </div>
 
-              {history.length > 0 && (
-                <button
-                  onClick={() => {
-                    if (confirm("Are you sure you want to purge all local transcoder logs?")) {
-                      setHistory([]);
-                    }
-                  }}
-                  className="px-3 py-1.5 border-2 border-black text-xs font-mono font-bold text-red-600 hover:bg-red-500 hover:text-white rounded-lg transition-colors cursor-pointer"
-                >
-                  PURGE_LOGS
-                </button>
-              )}
-            </div>
-
-            {/* Timelines and Lists */}
-            {filteredHistory.length === 0 ? (
-              <div className="border-2 border-dashed border-black rounded-xl p-12 text-center bg-zinc-50 dark:bg-zinc-950 font-mono space-y-3">
-                <Trash2 className="w-10 h-10 mx-auto text-zinc-400" />
-                <h4 className="font-bold text-sm uppercase">No transaction entries found</h4>
-                <p className="text-xs text-zinc-500">Run a compressor or converter routine to build system history.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                
-                {/* TIMELINE VIEW GRID */}
-                <div className="border-2 border-black rounded-xl divide-y-2 divide-black overflow-hidden bg-white dark:bg-black font-mono text-xs">
-                  {filteredHistory.map((item) => {
-                    const savedBytes = item.originalSize - item.compressedSize;
-                    const percent = Math.round((savedBytes / item.originalSize) * 100);
-                    return (
-                      <div key={item.id} className="p-4 flex flex-wrap items-center justify-between gap-6 hover:bg-zinc-50 dark:hover:bg-zinc-950 transition-colors">
-                        <div className="flex items-center gap-3 min-w-[250px]">
-                          <div className="p-2 border border-black bg-zinc-100 dark:bg-zinc-900 text-[10px] font-bold text-black dark:text-white uppercase">
-                            {item.type}
-                          </div>
-                          <div>
-                            <p className="font-sans font-bold text-black dark:text-white text-sm">{item.filename}</p>
-                            <span className="text-[10px] text-zinc-400 block truncate max-w-sm">ORIGINAL: {item.originalName}</span>
-                            <span className="text-[9px] text-zinc-400 block font-mono">{item.timestamp} // ISO_CACHE</span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-6 flex-wrap">
-                          <div className="text-right">
-                            <p className="font-bold text-black dark:text-white text-sm">
-                              {formatBytes(item.compressedSize)}
-                            </p>
-                            <p className="text-[10px] text-zinc-500">
-                              Original: {formatBytes(item.originalSize)}
-                            </p>
-                            <p className="text-[10px] text-green-600 dark:text-green-400 font-bold">
-                              Saved: {formatBytes(savedBytes)} ({percent > 0 ? `-${percent}%` : "0%"})
-                            </p>
-                          </div>
-
-                          <div className="flex gap-2">
-                            <a
-                              href={item.url === "#" ? undefined : item.url}
-                              download={item.filename}
-                              onClick={() => item.url === "#" && alert("This historical log was created in a previous session. New files support immediate local redownload!")}
-                              className="px-3 py-1.5 border border-black bg-white text-black hover:bg-black hover:text-white font-bold text-[10px] uppercase transition-colors"
-                            >
-                              [REDOWNLOAD]
-                            </a>
-                            <button
-                              onClick={() => clearLog(item.id)}
-                              className="p-1.5 border border-black text-red-600 hover:bg-red-500 hover:text-white transition-colors"
-                              title="Delete Entry"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* HISTORICAL RECOVERY INFO */}
-                <div className="p-4 border-2 border-black rounded-xl bg-zinc-50 dark:bg-zinc-900/40 text-xs font-mono text-zinc-500 leading-relaxed uppercase">
-                  <strong>SYSTEM_WARNING:</strong> Caches exist exclusively inside your local storage segment. Purging your browser cache or deleting storage variables will destroy historical timelines. Convert securely without cloud logging.
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* VIEW 7: PRIVACY POLICY SCREEN */}
         {currentView === "privacy" && (
@@ -2567,7 +2364,7 @@ export default function App() {
                         </h3>
                       </div>
                       <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
-                        Custom settings and transaction logs (<span className="text-black dark:text-white font-bold bg-zinc-200 dark:bg-zinc-800 px-1 rounded">HIST_LOG.DAT</span>) are compiled using standard browser LocalStorage APIs. This storage persists locally to rebuild your history log across separate work sessions. You hold absolute control: you can clear this cache instantly via the "PURGE_LOGS" directive on the history panel.
+                        Custom settings are compiled using standard browser LocalStorage APIs. This storage persists locally to rebuild your application preferences across separate work sessions. You hold absolute control: you can clear this cache instantly via standard browser settings or cache clearing processes.
                       </p>
                     </div>
                   )}
@@ -2634,7 +2431,7 @@ export default function App() {
                   ("02. ZERO TELEMETRY & COOKIE DETECTOR SURVEILLANCE METRICS DIAGNOSTIC LOGGING THIRD-PARTY ANALYTICAL"
                     .toLowerCase()
                     .includes(legalSearch.toLowerCase()) && (privacyTab === "all" || privacyTab === "local")) ||
-                  ("03. STATE VARIABLES & CACHE PERSISTENCE CUSTOM SETTINGS TRANSACTION LOGS LOCALSTORAGE API HIST_LOG.DAT PURGE_LOGS"
+                  ("03. STATE VARIABLES & CACHE PERSISTENCE CUSTOM SETTINGS LOCALSTORAGE API"
                     .toLowerCase()
                     .includes(legalSearch.toLowerCase()) && (privacyTab === "all" || privacyTab === "storage")) ||
                   ("04. PERMISSIONS & BROWSER SECURITY SECURITY BOUNDARIES CAMERA LOCATION MICROPHONE IDENTITY HARDWARE RESOURCES"

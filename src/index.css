@@ -25,4 +25,13 @@
   .pixel-borders {
     image-rendering: pixelated;
   }
+
+  /* Hide scrollbar for Chrome, Safari, Opera, Firefox, IE and Edge */
+  .scrollbar-none {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
 }
