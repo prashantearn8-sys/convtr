@@ -20,7 +20,7 @@ export interface AIResponse {
 
 export type ActiveTab = "image" | "code" | "minifier";
 
-export type RetroView = "home" | "compress_img" | "compress_pdf" | "convert_img" | "image_to_pdf" | "merge_pdf" | "word_to_pdf" | "pdf_to_word" | "history" | "privacy" | "terms";
+export type RetroView = "home" | "compress_img" | "compress_pdf" | "convert_img" | "image_to_pdf" | "merge_pdf" | "history" | "privacy" | "terms";
 
 export interface HistoryItem {
   id: string;

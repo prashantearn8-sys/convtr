@@ -37,13 +37,17 @@ export async function processImageClientSide(
   file: File,
   quality: number,
   scale: number,
-  targetFormat: ImageFormat
+  targetFormat: ImageFormat,
+  rotation = 0
 ): Promise<ImageProcessResult> {
   const originalDataUrl = await readFileAsDataURL(file);
   const img = await loadImage(originalDataUrl);
 
-  const targetWidth = Math.round(img.width * scale);
-  const targetHeight = Math.round(img.height * scale);
+  const angleRad = (rotation * Math.PI) / 180;
+  const is90or270 = Math.abs(rotation % 180) === 90;
+
+  const targetWidth = is90or270 ? Math.round(img.height * scale) : Math.round(img.width * scale);
+  const targetHeight = is90or270 ? Math.round(img.width * scale) : Math.round(img.height * scale);
 
   const canvas = document.createElement("canvas");
   canvas.width = targetWidth;
@@ -60,8 +64,13 @@ export async function processImageClientSide(
     ctx.fillRect(0, 0, targetWidth, targetHeight);
   }
 
-  // Draw scaled image
-  ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+  // Translate to center, rotate, and draw
+  ctx.translate(targetWidth / 2, targetHeight / 2);
+  ctx.rotate(angleRad);
+
+  const drawWidth = Math.round(img.width * scale);
+  const drawHeight = Math.round(img.height * scale);
+  ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
 
   return new Promise((resolve, reject) => {
     // Note: BMP is usually outputted as PNG or simple base64, we can convert to canvas BMP blob if supported, or fall back
