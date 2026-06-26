@@ -45,35 +45,15 @@ export default function App() {
   const [currentView, setCurrentView] = useState<RetroView>("home");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentTime, setCurrentTime] = useState<string>("");
+  const [privacyTab, setPrivacyTab] = useState<"all" | "local" | "storage" | "rights">("all");
+  const [termsTab, setTermsTab] = useState<"all" | "usage" | "ownership" | "liability">("all");
+  const [legalSearch, setLegalSearch] = useState<string>("");
   const darkMode = true;
   
   // History logs (loaded from/persisted to localStorage)
   const [history, setHistory] = useState<HistoryItem[]>(() => {
     const saved = localStorage.getItem("mono_transcoder_history_v2");
-    return saved ? JSON.parse(saved) : [
-      {
-        id: "log-1",
-        filename: "hero_banner_compressed.webp",
-        originalName: "hero_banner_original.png",
-        type: "image",
-        originalSize: 1843200, // 1.8MB
-        compressedSize: 245760, // 240KB
-        url: "#",
-        format: "image/webp",
-        timestamp: "2026-06-25 07:30"
-      },
-      {
-        id: "log-2",
-        filename: "q3_report_optimized.pdf",
-        originalName: "q3_report.pdf",
-        type: "pdf",
-        originalSize: 4505600, // 4.3MB
-        compressedSize: 983040, // 960KB
-        url: "#",
-        format: "application/pdf",
-        timestamp: "2026-06-25 06:12"
-      }
-    ];
+    return saved ? JSON.parse(saved) : [];
   });
 
   // ==========================================
@@ -2452,81 +2432,256 @@ export default function App() {
           <div className="space-y-6 animate-fade-in" id="privacy-policy-view">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-black pb-4">
               <div>
-                <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
-                  PRIVACY_POLICY.TXT // SECURITY_BYLAWS
+                <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-green-600 dark:text-green-400" /> PRIVACY_POLICY.TXT // SECURITY_BYLAWS
                 </h2>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
                   Channel security protocol status: <span className="font-bold uppercase text-green-600 dark:text-green-400">100% LOCAL COMPLIANT</span>
                 </p>
               </div>
               <button
-                onClick={() => setCurrentView("home")}
-                className="px-4 py-2 bg-white text-black dark:bg-zinc-900 dark:text-white border-2 border-black font-mono font-bold text-xs uppercase hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_#000000] cursor-pointer self-start sm:self-auto"
+                onClick={() => { setCurrentView("home"); setLegalSearch(""); setPrivacyTab("all"); }}
+                className="px-4 py-2 bg-white text-black dark:bg-zinc-900 dark:text-white border-2 border-black font-mono font-bold text-xs uppercase hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_#000000] cursor-pointer self-start sm:self-auto active:translate-y-0.5 active:shadow-none"
               >
                 [BACK_TO_HOME]
               </button>
             </div>
 
+            {/* SEARCH AND FILTER CONTROL STATION */}
+            <div className="bg-zinc-100 dark:bg-zinc-900 p-4 border-2 border-black rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-mono font-bold uppercase text-zinc-400">FILTER_SECTION:</span>
+                <button
+                  onClick={() => setPrivacyTab("all")}
+                  className={`px-3 py-1 text-xs font-mono font-bold uppercase border-2 border-black rounded transition-all cursor-pointer ${
+                    privacyTab === "all"
+                      ? "bg-black text-white dark:bg-white dark:text-black shadow-none"
+                      : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] active:translate-y-0.5 active:shadow-none"
+                  }`}
+                >
+                  ALL
+                </button>
+                <button
+                  onClick={() => setPrivacyTab("local")}
+                  className={`px-3 py-1 text-xs font-mono font-bold uppercase border-2 border-black rounded transition-all cursor-pointer ${
+                    privacyTab === "local"
+                      ? "bg-black text-white dark:bg-white dark:text-black shadow-none"
+                      : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] active:translate-y-0.5 active:shadow-none"
+                  }`}
+                >
+                  Local Processing
+                </button>
+                <button
+                  onClick={() => setPrivacyTab("storage")}
+                  className={`px-3 py-1 text-xs font-mono font-bold uppercase border-2 border-black rounded transition-all cursor-pointer ${
+                    privacyTab === "storage"
+                      ? "bg-black text-white dark:bg-white dark:text-black shadow-none"
+                      : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] active:translate-y-0.5 active:shadow-none"
+                  }`}
+                >
+                  State & Storage
+                </button>
+                <button
+                  onClick={() => setPrivacyTab("rights")}
+                  className={`px-3 py-1 text-xs font-mono font-bold uppercase border-2 border-black rounded transition-all cursor-pointer ${
+                    privacyTab === "rights"
+                      ? "bg-black text-white dark:bg-white dark:text-black shadow-none"
+                      : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] active:translate-y-0.5 active:shadow-none"
+                  }`}
+                >
+                  User Rights
+                </button>
+              </div>
+
+              <div className="relative flex-1 max-w-md w-full">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
+                  <Search className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  value={legalSearch}
+                  onChange={(e) => setLegalSearch(e.target.value)}
+                  placeholder="SEARCH_POLICIES.EXE (e.g. cookies, GDPR...)"
+                  className="w-full pl-9 pr-4 py-1.5 bg-white dark:bg-black text-black dark:text-white border-2 border-black rounded font-mono text-xs uppercase placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-all shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff]"
+                />
+                {legalSearch && (
+                  <button
+                    onClick={() => setLegalSearch("")}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-black dark:hover:text-white cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* PRIMARY CONTENT */}
-              <div className="lg:col-span-8 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6 font-mono text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                <div className="p-4 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60">
-                  <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white mb-2">
-                    01. ZERO-CLOUD PROCESSING MANIFESTO
-                  </h3>
-                  <p className="uppercase">
-                    MONO-TRANSCODER is structurally engineered on a decentralized, client-only paradigm. Every image compression, PDF merge, PDF compression, and file transaction you trigger occurs 100% inside your browser's sandboxed process thread. No files are uploaded to any external cloud, remote servers, or secondary file repositories.
-                  </p>
-                </div>
+              <div className="lg:col-span-8 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6 font-mono text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
+                {/* 01. ZERO-CLOUD PROCESSING */}
+                {(privacyTab === "all" || privacyTab === "local") &&
+                  ("01. ZERO-CLOUD PROCESSING MANIFESTO LOCAL TRANSCODER DECENTRALIZED CLIENT-ONLY PARADIGM IMAGE COMPRESSION PDF MERGE"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">01</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          ZERO-CLOUD PROCESSING MANIFESTO
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        MONO-TRANSCODER is structurally engineered on a decentralized, client-only paradigm. Every image compression, PDF merge, PDF compression, and file transaction you trigger occurs 100% inside your browser's sandboxed process thread. No files are uploaded to any external cloud, remote servers, or secondary file repositories. All bytes remain strictly yours.
+                      </p>
+                    </div>
+                  )}
 
-                <div className="p-4 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60">
-                  <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white mb-2">
-                    02. ZERO TELEMETRY & COOKIE DETECTOR
-                  </h3>
-                  <p className="uppercase">
-                    We do not deploy surveillance metrics, diagnostic logging trackers, telemetry aggregators, or targeting advertising algorithms. No third-party analytical integrations (such as Google Analytics or Segment) exist in our codebase. Your operational workflow remains entirely private.
-                  </p>
-                </div>
+                {/* 02. ZERO TELEMETRY */}
+                {(privacyTab === "all" || privacyTab === "local") &&
+                  ("02. ZERO TELEMETRY & COOKIE DETECTOR SURVEILLANCE METRICS DIAGNOSTIC LOGGING THIRD-PARTY ANALYTICAL"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">02</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          ZERO TELEMETRY & COOKIE DETECTOR
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        We do not deploy surveillance metrics, diagnostic logging trackers, telemetry aggregators, or targeting advertising algorithms. No third-party analytical integrations (such as Google Analytics or Segment) exist in our codebase. Your operational workflow remains entirely anonymous and decoupled from our web hosting infrastructure.
+                      </p>
+                    </div>
+                  )}
 
-                <div className="p-4 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60">
-                  <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white mb-2">
-                    03. STATE VARIABLES & CACHE PERSISTENCE
-                  </h3>
-                  <p className="uppercase">
-                    Custom settings and transaction logs (<span className="text-black dark:text-white">HIST_LOG.DAT</span>) are compiled using standard browser LocalStorage APIs. This storage persists locally to rebuild your history log across separate work sessions. You hold absolute control: you can clear this cache instantly via the "PURGE_LOGS" directive.
-                  </p>
-                </div>
+                {/* 03. STATE VARIABLES & LOCAL STORAGE */}
+                {(privacyTab === "all" || privacyTab === "storage") &&
+                  ("03. STATE VARIABLES & CACHE PERSISTENCE CUSTOM SETTINGS TRANSACTION LOGS LOCALSTORAGE API HIST_LOG.DAT PURGE_LOGS"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">03</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          STATE VARIABLES & CACHE PERSISTENCE
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        Custom settings and transaction logs (<span className="text-black dark:text-white font-bold bg-zinc-200 dark:bg-zinc-800 px-1 rounded">HIST_LOG.DAT</span>) are compiled using standard browser LocalStorage APIs. This storage persists locally to rebuild your history log across separate work sessions. You hold absolute control: you can clear this cache instantly via the "PURGE_LOGS" directive on the history panel.
+                      </p>
+                    </div>
+                  )}
 
-                <div className="p-4 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60">
-                  <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white mb-2">
-                    04. PERMISSIONS & BROWSER SECURITY
-                  </h3>
-                  <p className="uppercase">
-                    Our platform executes within strict security boundaries. No camera, location, microphone, or external identity access is requested or triggered during file execution. Hardware resources are dedicated purely to mathematical calculations for local image down-sampling.
-                  </p>
-                </div>
+                {/* 04. PERMISSIONS */}
+                {(privacyTab === "all" || privacyTab === "rights") &&
+                  ("04. PERMISSIONS & BROWSER SECURITY SECURITY BOUNDARIES CAMERA LOCATION MICROPHONE IDENTITY HARDWARE RESOURCES"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">04</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          PERMISSIONS & BROWSER SECURITY
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        Our platform executes within strict security boundaries. No camera, location, microphone, contact list, or external identity access is requested or triggered during file execution. Hardware resources are dedicated purely to mathematical calculations for local image down-sampling and PDF compounding.
+                      </p>
+                    </div>
+                  )}
+
+                {/* 05. THIRD-PARTY RESOURCES */}
+                {(privacyTab === "all" || privacyTab === "local" || privacyTab === "storage") &&
+                  ("05. LOCAL LIBRARY ARCHITECTURE WEB WORKERS OFFLINE EXECUTION PDF-LIB EMBEDDED"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">05</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          LOCAL LIBRARY ARCHITECTURE
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        We leverage highly trusted open-source packages including <span className="text-black dark:text-white font-bold">pdf-lib</span>. These utilities are bundled into our production scripts and run synchronously or asynchronously inside your browser tab's CPU context. No network calls are dispatched to external API servers during file conversions or manipulations.
+                      </p>
+                    </div>
+                  )}
+
+                {/* 06. USER RIGHTS (GDPR & CCPA COMPLIANCE) */}
+                {(privacyTab === "all" || privacyTab === "rights") &&
+                  ("06. DATA SUBJECT RIGHTS GDPR CCPA COMPLIANCE RIGHT TO BE FORGOTTEN COVEREIGNTY WIPING COOKIES SITE DATA"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">06</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          USER SOVEREIGNTY (GDPR & CCPA RIGHTS)
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        Since all data resides on your storage volume, we do not have access to, manage, or keep your records. You have an absolute right to update, download, or forget your files. Cleaving your local data history or clearing your site data inside your browser instantly exercises your absolute right to be forgotten.
+                      </p>
+                    </div>
+                  )}
+
+                {/* NO SEARCH RESULTS FALLBACK */}
+                {!(
+                  ("01. ZERO-CLOUD PROCESSING MANIFESTO LOCAL TRANSCODER DECENTRALIZED CLIENT-ONLY PARADIGM IMAGE COMPRESSION PDF MERGE"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (privacyTab === "all" || privacyTab === "local")) ||
+                  ("02. ZERO TELEMETRY & COOKIE DETECTOR SURVEILLANCE METRICS DIAGNOSTIC LOGGING THIRD-PARTY ANALYTICAL"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (privacyTab === "all" || privacyTab === "local")) ||
+                  ("03. STATE VARIABLES & CACHE PERSISTENCE CUSTOM SETTINGS TRANSACTION LOGS LOCALSTORAGE API HIST_LOG.DAT PURGE_LOGS"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (privacyTab === "all" || privacyTab === "storage")) ||
+                  ("04. PERMISSIONS & BROWSER SECURITY SECURITY BOUNDARIES CAMERA LOCATION MICROPHONE IDENTITY HARDWARE RESOURCES"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (privacyTab === "all" || privacyTab === "rights")) ||
+                  ("05. LOCAL LIBRARY ARCHITECTURE WEB WORKERS OFFLINE EXECUTION PDF-LIB EMBEDDED"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (privacyTab === "all" || privacyTab === "local" || privacyTab === "storage")) ||
+                  ("06. DATA SUBJECT RIGHTS GDPR CCPA COMPLIANCE RIGHT TO BE FORGOTTEN COVEREIGNTY WIPING COOKIES SITE DATA"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (privacyTab === "all" || privacyTab === "rights"))
+                ) && (
+                  <div className="p-8 text-center border-2 border-dashed border-zinc-400 rounded-lg">
+                    <HelpCircle className="w-8 h-8 text-zinc-400 mx-auto mb-2" />
+                    <p className="font-mono text-xs uppercase text-zinc-500">
+                      NO PROTOCOLS COMPATIBLE WITH SEARCH QUERY: "{legalSearch.toUpperCase()}"
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* RETRO ASSURANCE RAIL */}
               <div className="lg:col-span-4 bg-zinc-50 dark:bg-zinc-950 border-2 border-black rounded-xl p-6 space-y-4">
                 <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white border-b border-black pb-2 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4" /> VERIFICATION.LOG
+                  <ShieldCheck className="w-4 h-4 text-green-600 dark:text-green-400" /> VERIFICATION.LOG
                 </h3>
                 <div className="space-y-3 text-xs font-mono">
                   <div className="flex justify-between border-b border-dashed border-zinc-300 dark:border-zinc-800 pb-1.5">
-                    <span className="text-zinc-500">ENCRYPTION:</span>
+                    <span className="text-zinc-500 uppercase">ENCRYPTION:</span>
                     <strong className="text-black dark:text-white">LOCAL_AES_TLS</strong>
                   </div>
                   <div className="flex justify-between border-b border-dashed border-zinc-300 dark:border-zinc-800 pb-1.5">
-                    <span className="text-zinc-500">CLOUD_TRAFFIC:</span>
+                    <span className="text-zinc-500 uppercase">CLOUD_TRAFFIC:</span>
                     <strong className="text-red-500">0.00 KB/S</strong>
                   </div>
                   <div className="flex justify-between border-b border-dashed border-zinc-300 dark:border-zinc-800 pb-1.5">
-                    <span className="text-zinc-500">SANDBOX_LOCK:</span>
+                    <span className="text-zinc-500 uppercase">SANDBOX_LOCK:</span>
                     <strong className="text-green-500">SECURE_TRUE</strong>
                   </div>
+                  <div className="flex justify-between border-b border-dashed border-zinc-300 dark:border-zinc-800 pb-1.5">
+                    <span className="text-zinc-500 uppercase">HOST_ORIGIN:</span>
+                    <strong className="text-black dark:text-white truncate max-w-[120px]" title={window.location.hostname}>
+                      {window.location.hostname || "SANDBOX"}
+                    </strong>
+                  </div>
                 </div>
-                <div className="p-3 bg-white dark:bg-black border border-black rounded text-[10px] font-mono text-zinc-400 uppercase leading-relaxed">
+                <div className="p-3 bg-white dark:bg-black border border-black rounded text-[10px] font-mono text-zinc-500 uppercase leading-relaxed">
                   Notice: All compliance audits confirm absolute user sovereignty. You are the sole executor and owner of all active data pools.
                 </div>
               </div>
@@ -2539,81 +2694,254 @@ export default function App() {
           <div className="space-y-6 animate-fade-in" id="terms-of-use-view">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-black pb-4">
               <div>
-                <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
-                  TERMS_OF_USE.TXT // SERVICE_BYLAWS
+                <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" /> TERMS_OF_USE.TXT // SERVICE_BYLAWS
                 </h2>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
                   Agreement parameter: <span className="font-bold uppercase text-black dark:text-white">FREE_DECENTRALIZED_UTILITY</span>
                 </p>
               </div>
               <button
-                onClick={() => setCurrentView("home")}
-                className="px-4 py-2 bg-white text-black dark:bg-zinc-900 dark:text-white border-2 border-black font-mono font-bold text-xs uppercase hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_#000000] cursor-pointer self-start sm:self-auto"
+                onClick={() => { setCurrentView("home"); setLegalSearch(""); setTermsTab("all"); }}
+                className="px-4 py-2 bg-white text-black dark:bg-zinc-900 dark:text-white border-2 border-black font-mono font-bold text-xs uppercase hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_#000000] cursor-pointer self-start sm:self-auto active:translate-y-0.5 active:shadow-none"
               >
                 [BACK_TO_HOME]
               </button>
             </div>
 
+            {/* SEARCH AND FILTER CONTROL STATION */}
+            <div className="bg-zinc-100 dark:bg-zinc-900 p-4 border-2 border-black rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-mono font-bold uppercase text-zinc-400">FILTER_SECTION:</span>
+                <button
+                  onClick={() => setTermsTab("all")}
+                  className={`px-3 py-1 text-xs font-mono font-bold uppercase border-2 border-black rounded transition-all cursor-pointer ${
+                    termsTab === "all"
+                      ? "bg-black text-white dark:bg-white dark:text-black shadow-none"
+                      : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] active:translate-y-0.5 active:shadow-none"
+                  }`}
+                >
+                  ALL
+                </button>
+                <button
+                  onClick={() => setTermsTab("usage")}
+                  className={`px-3 py-1 text-xs font-mono font-bold uppercase border-2 border-black rounded transition-all cursor-pointer ${
+                    termsTab === "usage"
+                      ? "bg-black text-white dark:bg-white dark:text-black shadow-none"
+                      : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] active:translate-y-0.5 active:shadow-none"
+                  }`}
+                >
+                  Permitted Use
+                </button>
+                <button
+                  onClick={() => setTermsTab("ownership")}
+                  className={`px-3 py-1 text-xs font-mono font-bold uppercase border-2 border-black rounded transition-all cursor-pointer ${
+                    termsTab === "ownership"
+                      ? "bg-black text-white dark:bg-white dark:text-black shadow-none"
+                      : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] active:translate-y-0.5 active:shadow-none"
+                  }`}
+                >
+                  File Sovereignty
+                </button>
+                <button
+                  onClick={() => setTermsTab("liability")}
+                  className={`px-3 py-1 text-xs font-mono font-bold uppercase border-2 border-black rounded transition-all cursor-pointer ${
+                    termsTab === "liability"
+                      ? "bg-black text-white dark:bg-white dark:text-black shadow-none"
+                      : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700 shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] active:translate-y-0.5 active:shadow-none"
+                  }`}
+                >
+                  Warranties & Limit
+                </button>
+              </div>
+
+              <div className="relative flex-1 max-w-md w-full">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
+                  <Search className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  value={legalSearch}
+                  onChange={(e) => setLegalSearch(e.target.value)}
+                  placeholder="SEARCH_TERMS.EXE (e.g. warranty, commercial...)"
+                  className="w-full pl-9 pr-4 py-1.5 bg-white dark:bg-black text-black dark:text-white border-2 border-black rounded font-mono text-xs uppercase placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-all shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff]"
+                />
+                {legalSearch && (
+                  <button
+                    onClick={() => setLegalSearch("")}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-black dark:hover:text-white cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* PRIMARY TERMS */}
-              <div className="lg:col-span-8 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6 font-mono text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
-                <div className="p-4 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60">
-                  <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white mb-2">
-                    01. SOFTWARE ACCEPTANCE & SANDBOX RUNTIME
-                  </h3>
-                  <p className="uppercase">
-                    By accessing and invoking the local transcoders (<span className="text-black dark:text-white">COMPRESS_IMG.PRG</span>, <span className="text-black dark:text-white">COMPRESS_PDF.PRG</span>, etc.), you agree to execute these mathematical calculations strictly within your client sandbox environment. The tools are supplied "as is", for personal, public, and commercial utilization.
-                  </p>
-                </div>
+              <div className="lg:col-span-8 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6 font-mono text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
+                {/* 01. SOFTWARE ACCEPTANCE */}
+                {(termsTab === "all" || termsTab === "usage") &&
+                  ("01. SOFTWARE ACCEPTANCE & SANDBOX RUNTIME LOCAL TRANSCODERS COMPRESS_IMG.PRG COMPRESS_PDF.PRG MATHEMATICAL CALCULATIONS"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">01</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          SOFTWARE ACCEPTANCE & SANDBOX RUNTIME
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        By accessing and invoking the local transcoders (<span className="text-black dark:text-white">COMPRESS_IMG.PRG</span>, <span className="text-black dark:text-white">COMPRESS_PDF.PRG</span>, etc.), you agree to execute these mathematical calculations strictly within your client sandbox environment. The tools are supplied "as is", for personal, public, and commercial utilization.
+                      </p>
+                    </div>
+                  )}
 
-                <div className="p-4 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60">
-                  <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white mb-2">
-                    02. ABSOLUTE DATA SOUVEREIGNTY
-                  </h3>
-                  <p className="uppercase">
-                    MONO-TRANSCODER retains zero rights, licensing stakes, or copyright claims over files processed, generated, down-sampled, or merged using these routines. You are the exclusive custodian and proprietor of your source and output assets. You are solely responsible for ensuring you have valid authorization to optimize files.
-                  </p>
-                </div>
+                {/* 02. ABSOLUTE DATA SOVEREIGNTY */}
+                {(termsTab === "all" || termsTab === "ownership") &&
+                  ("02. ABSOLUTE DATA SOVEREIGNTY LICENSE STAKES COPYRIGHT CLAIMS OWNER CUSTODIAN SOURCE OUTPUT ASSETS VALID AUTHORIZATION"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">02</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          ABSOLUTE DATA SOVEREIGNTY
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        MONO-TRANSCODER retains zero rights, licensing stakes, or copyright claims over files processed, generated, down-sampled, or merged using these routines. You are the exclusive custodian and proprietor of your source and output assets. You are solely responsible for ensuring you have valid authorization to optimize files.
+                      </p>
+                    </div>
+                  )}
 
-                <div className="p-4 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60">
-                  <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white mb-2">
-                    03. LIMITATION OF LIABILITY & STAGE FAULTS
-                  </h3>
-                  <p className="uppercase">
-                    Because processing occurs completely inside your local browser memory space, RETRO PRODUCTIVITY LABS is structurally exempt from any liability concerning data loss, file corruptions, memory leaks, client tab crashes, or data storage inconsistencies. Maintain backup copies of all files before execution.
-                  </p>
-                </div>
+                {/* 03. PERMITTED AND APPROPRIATE USE */}
+                {(termsTab === "all" || termsTab === "usage") &&
+                  ("03. PERMITTED AND APPROPRIATE USE COMMERCIAL PERSONAL EDUCATIONAL DEVELOPER REVERSE ENGINEERING MALICIOUS ACTIONS"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">03</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          PERMITTED AND APPROPRIATE USE
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        You may use this application for commercial or personal file manipulation. You are strictly forbidden from embedding this application in iframe containers of phishing domains or using it to distribute malicious scripts. All file operations must conform with regional regulatory jurisdictions.
+                      </p>
+                    </div>
+                  )}
 
-                <div className="p-4 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60">
-                  <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white mb-2">
-                    04. DECENTRALIZED TERMINATION BYPASS
-                  </h3>
-                  <p className="uppercase">
-                    This agreement carries no long-term contractual obligations. You may terminate access and revoke compliance parameters instantly at any time. To do so, simply clear your browser storage variables, purge your logs via the <span className="text-black dark:text-white">HIST_LOG.DAT</span> view, and close your active browser tab.
-                  </p>
-                </div>
+                {/* 04. LIMITATION OF LIABILITY */}
+                {(termsTab === "all" || termsTab === "liability") &&
+                  ("04. LIMITATION OF LIABILITY & STAGE FAULTS BROWSER MEMORY SPACE RETRO PRODUCTIVITY LABS EXEMPT DATA LOSS CORRUPTIONS memory leaks"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">04</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          LIMITATION OF LIABILITY & STAGE FAULTS
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        Because processing occurs completely inside your local browser memory space, RETRO PRODUCTIVITY LABS is structurally exempt from any liability concerning data loss, file corruptions, memory leaks, client tab crashes, or data storage inconsistencies. Maintain backup copies of all files before execution.
+                      </p>
+                    </div>
+                  )}
+
+                {/* 05. NO WARRANTY DISCLAIMER */}
+                {(termsTab === "all" || termsTab === "liability") &&
+                  ("05. NO WARRANTY DISCLAIMER AS IS CLAUSE MEMORY LIMITS NO FITNESS PARTICULAR PURPOSE CORRUPTION REPAIRS"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">05</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          NO WARRANTY DISCLAIMER
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        The utility is provided "AS IS", without warranty of any kind, express or implied. Memory limits are dictated by your device's browser stack. In rare instances, importing exceptionally oversized files (e.g., massive high-resolution imagery) may reach sandbox heap caps, which is an expected browser defense behavior.
+                      </p>
+                    </div>
+                  )}
+
+                {/* 06. DECENTRALIZED TERMINATION BYPASS */}
+                {(termsTab === "all" || termsTab === "usage") &&
+                  ("06. DECENTRALIZED TERMINATION BYPASS AGREEMENT CONTRACTUAL OBLIGATIONS TERMINATE ACCESS WIPE LOGS CLOSE TAB"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase())) && (
+                    <div className="p-5 border-2 border-black rounded-lg bg-zinc-50 dark:bg-zinc-950/60 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-2 mb-3 border-b border-black/10 dark:border-white/10 pb-2">
+                        <span className="p-1 bg-black text-white dark:bg-white dark:text-black rounded text-[10px] font-bold">06</span>
+                        <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white">
+                          DECENTRALIZED TERMINATION BYPASS
+                        </h3>
+                      </div>
+                      <p className="uppercase leading-loose text-zinc-600 dark:text-zinc-400">
+                        This agreement carries no long-term contractual obligations. You may terminate access and revoke compliance parameters instantly at any time. To do so, simply clear your browser storage variables, purge your logs via the <span className="text-black dark:text-white font-bold bg-zinc-200 dark:bg-zinc-800 px-1 rounded">HIST_LOG.DAT</span> view, and close your active browser tab.
+                      </p>
+                    </div>
+                  )}
+
+                {/* NO SEARCH RESULTS FALLBACK */}
+                {!(
+                  ("01. SOFTWARE ACCEPTANCE & SANDBOX RUNTIME LOCAL TRANSCODERS COMPRESS_IMG.PRG COMPRESS_PDF.PRG MATHEMATICAL CALCULATIONS"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (termsTab === "all" || termsTab === "usage")) ||
+                  ("02. ABSOLUTE DATA SOVEREIGNTY LICENSE STAKES COPYRIGHT CLAIMS OWNER CUSTODIAN SOURCE OUTPUT ASSETS VALID AUTHORIZATION"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (termsTab === "all" || termsTab === "ownership")) ||
+                  ("03. PERMITTED AND APPROPRIATE USE COMMERCIAL PERSONAL EDUCATIONAL DEVELOPER REVERSE ENGINEERING MALICIOUS ACTIONS"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (termsTab === "all" || termsTab === "usage")) ||
+                  ("04. LIMITATION OF LIABILITY & STAGE FAULTS BROWSER MEMORY SPACE RETRO PRODUCTIVITY LABS EXEMPT DATA LOSS CORRUPTIONS memory leaks"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (termsTab === "all" || termsTab === "liability")) ||
+                  ("05. NO WARRANTY DISCLAIMER AS IS CLAUSE MEMORY LIMITS NO FITNESS PARTICULAR PURPOSE CORRUPTION REPAIRS"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (termsTab === "all" || termsTab === "liability")) ||
+                  ("06. DECENTRALIZED TERMINATION BYPASS AGREEMENT CONTRACTUAL OBLIGATIONS TERMINATE ACCESS WIPE LOGS CLOSE TAB"
+                    .toLowerCase()
+                    .includes(legalSearch.toLowerCase()) && (termsTab === "all" || termsTab === "usage"))
+                ) && (
+                  <div className="p-8 text-center border-2 border-dashed border-zinc-400 rounded-lg">
+                    <HelpCircle className="w-8 h-8 text-zinc-400 mx-auto mb-2" />
+                    <p className="font-mono text-xs uppercase text-zinc-500">
+                      NO SERVICE BYLAWS COMPATIBLE WITH SEARCH QUERY: "{legalSearch.toUpperCase()}"
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* TERMS ASSETS BOARD */}
               <div className="lg:col-span-4 bg-zinc-50 dark:bg-zinc-950 border-2 border-black rounded-xl p-6 space-y-4 font-mono text-xs">
                 <h3 className="font-sans font-bold text-sm uppercase text-black dark:text-white border-b border-black pb-2 flex items-center gap-2">
-                  <Zap className="w-4 h-4" /> COMPLIANCE.CFG
+                  <Zap className="w-4 h-4 text-amber-500" /> COMPLIANCE.CFG
                 </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between border-b border-dashed border-zinc-300 dark:border-zinc-800 pb-1.5">
-                    <span>LICENSE_TYPE:</span>
+                    <span className="uppercase">LICENSE_TYPE:</span>
                     <strong className="text-black dark:text-white">MIT_STANDARD</strong>
                   </div>
                   <div className="flex justify-between border-b border-dashed border-zinc-300 dark:border-zinc-800 pb-1.5">
-                    <span>USAGE_LIMIT:</span>
+                    <span className="uppercase">USAGE_LIMIT:</span>
                     <strong className="text-green-500">UNLIMITED</strong>
                   </div>
                   <div className="flex justify-between border-b border-dashed border-zinc-300 dark:border-zinc-800 pb-1.5">
-                    <span>WARRANTIES:</span>
+                    <span className="uppercase">WARRANTIES:</span>
                     <strong className="text-red-500">ZERO_NONE</strong>
                   </div>
+                  <div className="flex justify-between border-b border-dashed border-zinc-300 dark:border-zinc-800 pb-1.5">
+                    <span className="uppercase">SOURCE_AVAIL:</span>
+                    <strong className="text-black dark:text-white">MIT_OPEN</strong>
+                  </div>
                 </div>
-                <div className="p-3 bg-white dark:bg-black border border-black rounded text-[10px] text-zinc-400 uppercase leading-relaxed">
+                <div className="p-3 bg-white dark:bg-black border border-black rounded text-[10px] text-zinc-500 uppercase leading-relaxed">
                   By continuing, you acknowledge that all computational transformations are executed directly under your supervision in real-time.
                 </div>
               </div>
