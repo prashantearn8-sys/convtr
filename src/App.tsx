@@ -585,27 +585,19 @@ export default function App() {
       {/* HEADER SECTION */}
       <header className="border-b-3 border-black bg-white dark:bg-black py-6 px-4 md:px-8 shrink-0">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-            <img
-              src="/logo.jpg"
-              alt="MONO-TRANSCODER Logo"
-              className="w-14 h-14 object-cover border-3 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,1)] rounded"
-              referrerPolicy="no-referrer"
-            />
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="bg-black text-white dark:bg-white dark:text-black px-2 py-0.5 font-mono text-[11px] font-bold tracking-widest uppercase border border-black dark:border-white">
-                  STABLE_SYS
-                </span>
-                <span className="text-xs text-zinc-500 font-mono">SANDBOX_ACTIVE (100% OFFLINE)</span>
-              </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold uppercase tracking-tighter font-sans leading-none text-black dark:text-white">
-                MONO-TRANSCODER
-              </h1>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-1 uppercase max-w-xl leading-relaxed">
-                Minimalist, high-contrast local file utility. Compress images/documents, reformat parameters, and optimize storage locally in the web browser.
-              </p>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="bg-black text-white dark:bg-white dark:text-black px-2 py-0.5 font-mono text-[11px] font-bold tracking-widest uppercase border border-black dark:border-white">
+                STABLE_SYS
+              </span>
+              <span className="text-xs text-zinc-500 font-mono">SANDBOX_ACTIVE (100% OFFLINE)</span>
             </div>
+            <h1 className="text-3xl md:text-4xl font-extrabold uppercase tracking-tighter font-sans leading-none text-black dark:text-white">
+              MONO-TRANSCODER
+            </h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-1 uppercase max-w-xl leading-relaxed">
+              Minimalist, high-contrast local file utility. Compress images/documents, reformat parameters, and optimize storage locally in the web browser.
+            </p>
           </div>
 
 
