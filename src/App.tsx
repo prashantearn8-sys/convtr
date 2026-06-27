@@ -587,7 +587,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
             <img
-              src="/src/assets/images/monotranscoder_logo_1782581742109.jpg"
+              src="/logo.jpg"
               alt="MONO-TRANSCODER Logo"
               className="w-14 h-14 object-cover border-3 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,1)] rounded"
               referrerPolicy="no-referrer"
