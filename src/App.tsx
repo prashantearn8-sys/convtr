@@ -32,6 +32,7 @@ import {
 import { RetroView, ImageFormat } from "./types";
 import { formatBytes, compressToTargetSizeKB, processImageClientSide } from "./utils/imageProcessor";
 import { PDFDocument } from "pdf-lib";
+import Helmet from "./components/Helmet";
 
 const QUICK_ACTIONS = [
   { id: "action-compress-img", title: "Compress Image File", desc: "Reduce dimensions and optimization parameters to targeted KB size.", view: "compress_img" },
@@ -42,7 +43,26 @@ const QUICK_ACTIONS = [
 ];
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<RetroView>("home");
+  const [currentView, setCurrentView] = useState<RetroView>(() => {
+    if (typeof window !== "undefined") {
+      const pathStr = window.location.pathname;
+      const clean = pathStr.replace(/^\//, "").replace(/-/g, "_");
+      const allowed: RetroView[] = [
+        "home",
+        "compress_img",
+        "compress_pdf",
+        "convert_img",
+        "image_to_pdf",
+        "merge_pdf",
+        "privacy",
+        "terms"
+      ];
+      if (allowed.includes(clean as RetroView)) {
+        return clean as RetroView;
+      }
+    }
+    return "home";
+  });
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentTime, setCurrentTime] = useState<string>("");
   const [privacyTab, setPrivacyTab] = useState<"all" | "local" | "storage" | "rights">("all");
@@ -136,6 +156,41 @@ export default function App() {
   const imageToPdfInputRef = useRef<HTMLInputElement>(null);
 
 
+
+  // Synchronize currentView state with browser URL path
+  useEffect(() => {
+    const handlePopState = () => {
+      const pathStr = window.location.pathname;
+      const clean = pathStr.replace(/^\//, "").replace(/-/g, "_");
+      const allowed: RetroView[] = [
+        "home",
+        "compress_img",
+        "compress_pdf",
+        "convert_img",
+        "image_to_pdf",
+        "merge_pdf",
+        "privacy",
+        "terms"
+      ];
+      if (allowed.includes(clean as RetroView)) {
+        setCurrentView(clean as RetroView);
+      } else {
+        setCurrentView("home");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  useEffect(() => {
+    const targetPath = currentView === "home" ? "/" : `/${currentView.replace(/_/g, "-")}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, "", targetPath);
+    }
+  }, [currentView]);
 
   // Live retro clock update
   useEffect(() => {
@@ -526,22 +581,31 @@ export default function App() {
       className={`min-h-screen ${darkMode ? "bg-black text-zinc-100" : "bg-white text-black"} flex flex-col font-sans transition-colors duration-200 retro-grid-bg`}
       id="application-root"
     >
+      <Helmet currentView={currentView} />
       {/* HEADER SECTION */}
       <header className="border-b-3 border-black bg-white dark:bg-black py-6 px-4 md:px-8 shrink-0">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="bg-black text-white dark:bg-white dark:text-black px-2 py-0.5 font-mono text-[11px] font-bold tracking-widest uppercase border border-black">
-                STABLE_SYS
-              </span>
-              <span className="text-xs text-zinc-500 font-mono">SANDBOX_ACTIVE (100% OFFLINE)</span>
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <img
+              src="/src/assets/images/monotranscoder_logo_1782581742109.jpg"
+              alt="MONO-TRANSCODER Logo"
+              className="w-14 h-14 object-cover border-3 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,1)] rounded"
+              referrerPolicy="no-referrer"
+            />
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="bg-black text-white dark:bg-white dark:text-black px-2 py-0.5 font-mono text-[11px] font-bold tracking-widest uppercase border border-black dark:border-white">
+                  STABLE_SYS
+                </span>
+                <span className="text-xs text-zinc-500 font-mono">SANDBOX_ACTIVE (100% OFFLINE)</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-extrabold uppercase tracking-tighter font-sans leading-none text-black dark:text-white">
+                MONO-TRANSCODER
+              </h1>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-1 uppercase max-w-xl leading-relaxed">
+                Minimalist, high-contrast local file utility. Compress images/documents, reformat parameters, and optimize storage locally in the web browser.
+              </p>
             </div>
-            <h1 className="text-3xl md:text-4xl font-extrabold uppercase tracking-tighter font-sans leading-none">
-              MONO-TRANSCODER
-            </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-1 uppercase max-w-xl leading-relaxed">
-              Minimalist, high-contrast local file utility. Compress images/documents, reformat parameters, and optimize storage locally in the web browser.
-            </p>
           </div>
 
 

@@ -1,5 +1,5 @@
 {
-  "name": "File Converter & Compressor",
+  "name": "MONO-TRANSCODER",
   "description": "A powerful web-based application for converting and compressing images, code, and documents in real-time, accompanied by a helpful AI assistant.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
