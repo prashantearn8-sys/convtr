@@ -92,6 +92,23 @@ Be concise, accurate, and speak with a highly professional yet supportive tone.`
     }
   });
 
+  // Google Search Console Verification Route
+  app.get("/google92bc6b05d0ebbf60.html", (req, res) => {
+    const devPath = path.join(process.cwd(), "public", "google92bc6b05d0ebbf60.html");
+    const prodPath = path.join(process.cwd(), "dist", "google92bc6b05d0ebbf60.html");
+    
+    res.sendFile(prodPath, (err) => {
+      if (err) {
+        res.sendFile(devPath, (err2) => {
+          if (err2) {
+            res.setHeader("Content-Type", "text/html");
+            res.send("google-site-verification: google92bc6b05d0ebbf60.html");
+          }
+        });
+      }
+    });
+  });
+
   // Vite middleware setup
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
