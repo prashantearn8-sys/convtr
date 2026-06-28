@@ -3,6 +3,9 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import helmet from "helmet";
+import cors from "cors";
+import { rateLimit } from "express-rate-limit";
 
 dotenv.config();
 
@@ -10,8 +13,51 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Middleware to parse incoming JSON payloads
-  app.use(express.json());
+  // Use helmet for robust security headers (XSS protection, Clickjacking prevention, Content Sniffing prevention, etc.)
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // unsafe-eval is required by Vite's development bundler
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          fontSrc: ["'self'", "https://fonts.gstatic.com"],
+          imgSrc: ["'self'", "data:", "blob:", "https://*"], // allow local blobs, data URIs, and external images for conversion/compression
+          connectSrc: ["'self'", "https://*", "wss://*"], // allows API queries and WebSocket triggers for Dev HMR
+          workerSrc: ["'self'", "blob:"], // critical for PDF libraries using web workers
+          frameSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests: [],
+        },
+      },
+      crossOriginEmbedderPolicy: false, // Disabled to prevent blocking local Object URL blobs from rendering in browser memory
+    })
+  );
+
+  // Configure Cross-Origin Resource Sharing (CORS) to prevent malicious domains from calling the API
+  app.use(
+    cors({
+      origin: process.env.NODE_ENV === "production" ? false : true, // Strict self-only CORS in production
+      credentials: true,
+    })
+  );
+
+  // Rate limiter for API endpoints to prevent DoS/brute-force abuse
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP address to 100 requests per 15 minutes
+    standardHeaders: true, // Return rate limit info in standard response headers
+    legacyHeaders: false, // Disable old rate limit headers
+    message: {
+      error: "Too many requests from this IP Address. Please try again in 15 minutes."
+    }
+  });
+
+  // Apply rate limiting specifically to api endpoints
+  app.use("/api/", apiLimiter);
+
+  // Parse incoming JSON payloads with a strict limit to prevent buffer exhaustion attacks
+  app.use(express.json({ limit: "5mb" }));
 
   // Initialize Gemini client if API key is present
   const apiKey = process.env.GEMINI_API_KEY;
@@ -35,6 +81,16 @@ async function startServer() {
       const { messages } = req.body;
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ error: "Invalid messages array." });
+      }
+
+      // Input Payload Security Validation: limit message count and total size to prevent memory starvation attacks
+      if (messages.length > 50) {
+        return res.status(400).json({ error: "Conversation history size limit exceeded." });
+      }
+      
+      const payloadString = JSON.stringify(messages);
+      if (payloadString.length > 512 * 1024) { // 512 KB payload ceiling
+        return res.status(400).json({ error: "Request payload too large." });
       }
 
       if (!ai) {

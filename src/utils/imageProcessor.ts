@@ -137,7 +137,7 @@ export async function compressToTargetSizeKB(
       scanvas.height = sh;
       const sctx = scanvas.getContext("2d");
       if (sctx) {
-        sctx.drawImage(img, 0, 0, sw, sh);
+        sctx.drawImage(canvas, 0, 0, img.width, img.height, 0, 0, sw, sh);
         const blob: Blob = await new Promise((res) => scanvas.toBlob((b) => res(b!), targetFormat));
         bestBlob = blob;
         if (blob.size / 1024 <= targetKB) {
@@ -197,7 +197,7 @@ export async function compressToTargetSizeKB(
       scanvas.height = sh;
       const sctx = scanvas.getContext("2d");
       if (sctx) {
-        sctx.drawImage(img, 0, 0, sw, sh);
+        sctx.drawImage(canvas, 0, 0, img.width, img.height, 0, 0, sw, sh);
         const blob: Blob = await new Promise((res) => scanvas.toBlob((b) => res(b!), targetFormat, 0.4));
         bestBlob = blob;
         finalScale = currentScale;

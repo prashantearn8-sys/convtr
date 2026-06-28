@@ -65,6 +65,13 @@ export default function App() {
   });
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [currentTime, setCurrentTime] = useState<string>("");
+  const [purgeTick, setPurgeTick] = useState<number>(Date.now());
+  const [compressImgTimestamp, setCompressImgTimestamp] = useState<number | null>(null);
+  const [compressPdfTimestamp, setCompressPdfTimestamp] = useState<number | null>(null);
+  const [convertImgTimestamp, setConvertImgTimestamp] = useState<number | null>(null);
+  const [mergePdfTimestamp, setMergePdfTimestamp] = useState<number | null>(null);
+  const [imageToPdfTimestamp, setImageToPdfTimestamp] = useState<number | null>(null);
+
   const [privacyTab, setPrivacyTab] = useState<"all" | "local" | "storage" | "rights">("all");
   const [termsTab, setTermsTab] = useState<"all" | "usage" | "ownership" | "liability">("all");
   const [legalSearch, setLegalSearch] = useState<string>("");
@@ -112,7 +119,6 @@ export default function App() {
   // ==========================================
   const [convertImgFiles, setConvertImgFiles] = useState<File[]>([]);
   const [convertImgPreviewUrl, setConvertImgPreviewUrl] = useState<string>("");
-  const [convertImgRotation, setConvertImgRotation] = useState<number>(0);
   const [convertImgTargetFmt, setConvertImgTargetFmt] = useState<"JPG" | "JPEG" | "PNG">("JPG");
   const [convertImgResult, setConvertImgResult] = useState<{
     url: string;
@@ -154,6 +160,107 @@ export default function App() {
   const [imageToPdfCustomName, setImageToPdfCustomName] = useState<string>("");
   const [imageToPdfIsProcessing, setImageToPdfIsProcessing] = useState<boolean>(false);
   const imageToPdfInputRef = useRef<HTMLInputElement>(null);
+
+  // Synchronize 60-minute auto-purge timestamps when files or results change
+  useEffect(() => {
+    if (compressImgFile || compressImgResult) {
+      setCompressImgTimestamp(Date.now());
+    } else {
+      setCompressImgTimestamp(null);
+    }
+  }, [compressImgFile, compressImgResult]);
+
+  useEffect(() => {
+    if (compressPdfFile || compressPdfResult) {
+      setCompressPdfTimestamp(Date.now());
+    } else {
+      setCompressPdfTimestamp(null);
+    }
+  }, [compressPdfFile, compressPdfResult]);
+
+  useEffect(() => {
+    if (convertImgFiles.length > 0 || convertImgResult) {
+      setConvertImgTimestamp(Date.now());
+    } else {
+      setConvertImgTimestamp(null);
+    }
+  }, [convertImgFiles, convertImgResult]);
+
+  useEffect(() => {
+    if (mergePdfFiles.length > 0 || mergePdfResult) {
+      setMergePdfTimestamp(Date.now());
+    } else {
+      setMergePdfTimestamp(null);
+    }
+  }, [mergePdfFiles, mergePdfResult]);
+
+  useEffect(() => {
+    if (imageToPdfFiles.length > 0 || imageToPdfResult) {
+      setImageToPdfTimestamp(Date.now());
+    } else {
+      setImageToPdfTimestamp(null);
+    }
+  }, [imageToPdfFiles, imageToPdfResult]);
+
+  // Auto-purge interval checking every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setPurgeTick(now);
+
+      const limit = 60 * 60 * 1000; // 60 minutes
+
+      if (compressImgTimestamp && now - compressImgTimestamp >= limit) {
+        setCompressImgFile(null);
+        setCompressImgResult(null);
+        setCompressImgPreviewUrl("");
+        setCompressImgCustomName("");
+        setCompressImgTimestamp(null);
+      }
+
+      if (compressPdfTimestamp && now - compressPdfTimestamp >= limit) {
+        setCompressPdfFile(null);
+        setCompressPdfResult(null);
+        setCompressPdfCustomName("");
+        setCompressPdfTimestamp(null);
+      }
+
+      if (convertImgTimestamp && now - convertImgTimestamp >= limit) {
+        setConvertImgFiles([]);
+        setConvertImgResult(null);
+        setConvertImgPreviewUrl("");
+        setConvertImgCustomName("");
+        setConvertImgTimestamp(null);
+      }
+
+      if (mergePdfTimestamp && now - mergePdfTimestamp >= limit) {
+        setMergePdfFiles([]);
+        setMergePdfResult(null);
+        setMergePdfCustomName("");
+        setMergePdfTimestamp(null);
+      }
+
+      if (imageToPdfTimestamp && now - imageToPdfTimestamp >= limit) {
+        setImageToPdfFiles([]);
+        setImageToPdfRotations([]);
+        setImageToPdfResult(null);
+        setImageToPdfCustomName("");
+        setImageToPdfTimestamp(null);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [
+    compressImgTimestamp,
+    compressPdfTimestamp,
+    convertImgTimestamp,
+    mergePdfTimestamp,
+    imageToPdfTimestamp
+  ]);
+
+  const renderAutoDeleteCountdown = (timestamp: number | null) => {
+    return null;
+  };
 
 
 
@@ -271,7 +378,6 @@ export default function App() {
       setConvertImgFiles([file]);
       setConvertImgResult(null);
       setConvertImgCustomName("");
-      setConvertImgRotation(0);
       const url = URL.createObjectURL(file);
       setConvertImgPreviewUrl(url);
     }
@@ -402,7 +508,7 @@ export default function App() {
       const targetFmt = convertImgTargetFmt;
       const file = convertImgFiles[0];
       const mimeType = targetFmt === "PNG" ? "image/png" : "image/jpeg";
-      const res = await processImageClientSide(file, 0.85, 1.0, mimeType as ImageFormat, convertImgRotation);
+      const res = await processImageClientSide(file, 0.85, 1.0, mimeType as ImageFormat);
       
       setConvertImgResult({
         url: res.url,
@@ -595,8 +701,8 @@ export default function App() {
             <h1 className="text-3xl md:text-4xl font-extrabold uppercase tracking-tighter font-sans leading-none text-black dark:text-white">
               MONO-TRANSCODER
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-1 uppercase max-w-xl leading-relaxed">
-              Minimalist, high-contrast local file utility. Compress images/documents, reformat parameters, and optimize storage locally in the web browser.
+            <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-1 uppercase tracking-tight sm:tracking-normal whitespace-nowrap truncate" title="Minimalist, high-contrast local file transcoder & optimizer.">
+              Minimalist, high-contrast local file transcoder & optimizer.
             </p>
           </div>
 
@@ -605,69 +711,68 @@ export default function App() {
       </header>
 
       {/* CORE CONTROL DECK VIEW SWITCHER */}
-      <nav className="border-b-3 border-black bg-zinc-50 dark:bg-zinc-900 py-3 px-4 md:px-8 shrink-0 overflow-x-auto scrollbar-none">
-        <div className="max-w-7xl mx-auto flex flex-nowrap sm:flex-wrap gap-2 justify-start min-w-max sm:min-w-0">
+      <nav className="border-b-3 border-black bg-zinc-50 dark:bg-zinc-900 py-3 px-4 md:px-8 shrink-0">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 sm:flex sm:flex-wrap gap-2 justify-start w-full">
           <button
             onClick={() => { setCurrentView("home"); }}
-            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer ${
+            className={`col-span-2 sm:col-auto px-4 py-2.5 sm:px-3 sm:py-1.5 text-sm sm:text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer text-center ${
               currentView === "home"
-                ? "bg-black text-white shadow-[2px_2px_0_0_#000000]"
-                : "bg-white text-black hover:bg-zinc-100"
+                ? "bg-black text-white shadow-[2px_2px_0_0_#000000] dark:bg-white dark:text-black dark:border-white dark:shadow-[2px_2px_0_0_#ffffff]"
+                : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             }`}
           >
             HOME
           </button>
           <button
             onClick={() => { setCurrentView("compress_img"); }}
-            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer ${
+            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer text-center ${
               currentView === "compress_img"
-                ? "bg-black text-white shadow-[2px_2px_0_0_#000000]"
-                : "bg-white text-black hover:bg-zinc-100"
+                ? "bg-black text-white shadow-[2px_2px_0_0_#000000] dark:bg-white dark:text-black dark:border-white dark:shadow-[2px_2px_0_0_#ffffff]"
+                : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             }`}
           >
             COMPRESS_IMG
           </button>
           <button
             onClick={() => { setCurrentView("compress_pdf"); }}
-            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer ${
+            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer text-center ${
               currentView === "compress_pdf"
-                ? "bg-black text-white shadow-[2px_2px_0_0_#000000]"
-                : "bg-white text-black hover:bg-zinc-100"
+                ? "bg-black text-white shadow-[2px_2px_0_0_#000000] dark:bg-white dark:text-black dark:border-white dark:shadow-[2px_2px_0_0_#ffffff]"
+                : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             }`}
           >
             COMPRESS_PDF
           </button>
           <button
             onClick={() => { setCurrentView("convert_img"); }}
-            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer ${
+            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer text-center ${
               currentView === "convert_img"
-                ? "bg-black text-white shadow-[2px_2px_0_0_#000000]"
-                : "bg-white text-black hover:bg-zinc-100"
+                ? "bg-black text-white shadow-[2px_2px_0_0_#000000] dark:bg-white dark:text-black dark:border-white dark:shadow-[2px_2px_0_0_#ffffff]"
+                : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             }`}
           >
             CONVERT_IMG
           </button>
           <button
             onClick={() => { setCurrentView("image_to_pdf"); }}
-            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer ${
+            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer text-center ${
               currentView === "image_to_pdf"
-                ? "bg-black text-white shadow-[2px_2px_0_0_#000000]"
-                : "bg-white text-black hover:bg-zinc-100"
+                ? "bg-black text-white shadow-[2px_2px_0_0_#000000] dark:bg-white dark:text-black dark:border-white dark:shadow-[2px_2px_0_0_#ffffff]"
+                : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             }`}
           >
             IMAGE_TO_PDF
           </button>
           <button
             onClick={() => { setCurrentView("merge_pdf"); }}
-            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer ${
+            className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border-2 border-black rounded-lg transition-all cursor-pointer text-center ${
               currentView === "merge_pdf"
-                ? "bg-black text-white shadow-[2px_2px_0_0_#000000]"
-                : "bg-white text-black hover:bg-zinc-100"
+                ? "bg-black text-white shadow-[2px_2px_0_0_#000000] dark:bg-white dark:text-black dark:border-white dark:shadow-[2px_2px_0_0_#ffffff]"
+                : "bg-white text-black hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             }`}
           >
             MERGE_PDF
           </button>
-
         </div>
       </nav>
 
@@ -770,16 +875,20 @@ export default function App() {
 
               <div className="border-2 border-black rounded-xl p-6 bg-white dark:bg-black flex flex-col justify-between">
                 <div className="space-y-2">
-                  <h4 className="font-mono font-bold text-xs uppercase text-zinc-500 tracking-widest">
-                    // USER ENVIRONMENT SECURITY
+                  <h4 className="font-mono font-bold text-xs uppercase text-zinc-500 tracking-widest flex items-center gap-1.5">
+                    // USER ENVIRONMENT SECURITY & AUTO-FORGET
                   </h4>
                   <p className="text-xs text-zinc-600 dark:text-zinc-400 font-mono leading-relaxed">
-                    Unlike typical file services, MONO-TRANSCODER is zero-telemetry. All transcoders evaluate locally. File readers load variables entirely inside your browser's virtual machine sandbox. Your data remains on your host.
+                    Unlike typical file services, MONO-TRANSCODER is zero-telemetry. All transcoders evaluate locally. Files and results reside entirely inside your browser's virtual machine sandbox. 
+                  </p>
+                  <p className="text-xs text-red-600 dark:text-red-400 font-mono font-bold leading-relaxed border-t border-zinc-100 dark:border-zinc-900 pt-2 flex items-center gap-1.5">
+                    <span>⚠️</span>
+                    <span>60-MINUTE AUTOPURGE MANDATE: Every uploaded document or compiled asset automatically self-destructs and is cleared from the app sandbox memory after 60 minutes of inactivity.</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] text-zinc-500 uppercase font-mono mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-900">
                   <ShieldCheck className="w-4 h-4 text-black dark:text-white" />
-                  <span>Verified 256-bit Offline Safe</span>
+                  <span>Verified 256-bit Offline Safe & Auto-Expiring</span>
                 </div>
               </div>
             </div>
@@ -791,13 +900,16 @@ export default function App() {
         {/* VIEW 2: COMPRESS IMAGE SCREEN */}
         {currentView === "compress_img" && (
           <div className="space-y-6 animate-fade-in" id="compress-img-view">
-            <div className="border-b border-black pb-4">
-              <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
-                COMPRESS_IMG.PRG // IMAGE OPTIMIZER
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                Optimizes image binary grids down to custom quality boundaries completely inside your client sandbox.
-              </p>
+            <div className="border-b border-black pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
+                  COMPRESS_IMG.PRG // IMAGE OPTIMIZER
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+                  Optimizes image binary grids down to custom quality boundaries completely inside your client sandbox.
+                </p>
+              </div>
+              {renderAutoDeleteCountdown(compressImgTimestamp)}
             </div>
 
             {!compressImgFile ? (
@@ -840,140 +952,47 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* PREVIEW & OUTPUT COLUMN (NOW FIRST/TOP) */}
-                <div className="lg:col-span-7 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6">
-                  <h3 className="font-mono font-bold text-xs uppercase tracking-wider border-b border-black pb-3 text-black dark:text-white">
-                    // VIEWPORT_STAGE.DAT
-                  </h3>
-
-                  <div className="space-y-6">
-                    {compressImgPreviewUrl && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Left Pane: Source Preview */}
-                        <div className="border-2 border-black rounded-lg min-h-[220px] max-h-[350px] bg-zinc-50 dark:bg-zinc-950 overflow-hidden flex flex-col relative">
-                          <div className="bg-zinc-100 dark:bg-zinc-800 border-b-2 border-black px-4 py-2 flex items-center justify-between text-xs font-mono font-bold text-black dark:text-white">
-                            <span>👁️ SOURCE_FILE_PREVIEW.DAT</span>
-                            <span className="text-[9px] text-zinc-500 font-normal uppercase">● QUEUED</span>
-                          </div>
-                          <div className="flex-grow p-4 overflow-auto flex items-center justify-center">
-                            <img
-                              src={compressImgPreviewUrl}
-                              alt="Preview Source"
-                              className="max-w-full max-h-[250px] object-contain border border-black p-1 bg-white shadow animate-fade-in"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Right Pane: Compressed Result or Waiting Placeholder */}
-                        {compressImgResult ? (
-                          <div className="border-2 border-black rounded-lg min-h-[220px] max-h-[350px] bg-zinc-50 dark:bg-zinc-950 overflow-hidden flex flex-col relative">
-                            <div className="bg-zinc-100 dark:bg-zinc-800 border-b-2 border-black px-4 py-2 flex items-center justify-between text-xs font-mono font-bold text-black dark:text-white">
-                              <span>👁️ OPTIMIZED_OUTPUT_PREVIEW.DAT</span>
-                              <span className="text-[9px] text-green-600 dark:text-green-400 font-normal uppercase animate-pulse">● COMPILED</span>
-                            </div>
-                            <div className="flex-grow p-4 overflow-auto flex items-center justify-center">
-                              <img
-                                src={compressImgResult.url}
-                                alt="Optimized Output"
-                                className="max-w-full max-h-[250px] object-contain border border-black p-1 bg-white shadow animate-fade-in"
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="border-2 border-dashed border-zinc-400 rounded-lg min-h-[220px] max-h-[350px] bg-zinc-50/50 dark:bg-zinc-950/50 overflow-hidden flex flex-col justify-center items-center p-6 text-center">
-                            <RefreshCw className="w-8 h-8 text-zinc-400 mb-2 animate-spin-slow" />
-                            <span className="block text-[11px] font-mono font-bold text-zinc-500 uppercase">
-                              [OPTIMIZED_PREVIEW.DAT]
-                            </span>
-                            <span className="text-[9px] text-zinc-400 font-mono uppercase mt-1">
-                              Awaiting optimization trigger...
-                            </span>
-                          </div>
-                        )}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* COLUMN 1: SOURCE FILE PREVIEW (Left on desktop, second on mobile) */}
+                <div className="lg:col-span-4 lg:order-1 order-2 space-y-4">
+                  {compressImgPreviewUrl ? (
+                    <div className="border-2 border-black rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-950 flex flex-col">
+                      <div className="bg-zinc-100 dark:bg-zinc-850 border-b-2 border-black px-4 py-2.5 flex items-center justify-between text-xs font-mono font-bold text-black dark:text-white">
+                        <span>👁️ SOURCE_FILE_PREVIEW.DAT</span>
+                        <span className="text-[9px] text-zinc-500 font-normal uppercase">● QUEUED</span>
                       </div>
-                    )}
-
-                    {/* Metrics and Download Actions for Result */}
-                    {compressImgResult && (
-                      <div className="border-2 border-dashed border-zinc-400 p-4 rounded-lg bg-zinc-50 dark:bg-zinc-950 space-y-4 animate-fade-in">
-                        <div className="flex items-center gap-2 text-xs font-mono font-bold text-green-600 dark:text-green-400">
-                          <Check className="w-4 h-4" />
-                          <span>OPTIMIZATION PIPELINE CONCLUDED SUCCESSFULLY!</span>
-                        </div>
-
-                        {/* Display final sizes */}
-                        <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                          <div className="bg-white dark:bg-black border border-black p-3 rounded-lg text-black dark:text-white">
-                            <span className="text-[9px] text-zinc-500 uppercase block font-bold mb-1">// BEFORE:</span>
-                            <span className="font-bold text-sm">{formatBytes(compressImgFile.size)}</span>
-                          </div>
-                          <div className="bg-white dark:bg-black border border-black p-3 rounded-lg text-black dark:text-white">
-                            <span className="text-[9px] text-zinc-500 uppercase block font-bold mb-1">// AFTER:</span>
-                            <span className="font-bold text-sm text-green-600 dark:text-green-400">
-                              {formatBytes(compressImgResult.size)}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="p-3 border border-black bg-white dark:bg-black rounded-lg text-xs font-mono text-center text-black dark:text-white">
-                          REDUCED WEIGHT BY:{" "}
-                          <strong className="text-green-600 dark:text-green-400 text-sm block mt-1">
-                            {formatBytes(compressImgFile.size - compressImgResult.size)} (-
-                            {Math.round(((compressImgFile.size - compressImgResult.size) / compressImgFile.size) * 100)}%)
-                          </strong>
-                        </div>
-
-                        {/* RENAME OPTION */}
-                        <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                          <label className="block text-[11px] font-mono font-bold text-black dark:text-white uppercase">
-                            RENAME OPTIMIZED OUTPUT FILE:
-                          </label>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={compressImgCustomName}
-                              onChange={(e) => setCompressImgCustomName(e.target.value)}
-                              placeholder="Enter output filename (excluding extension)"
-                              className="flex-grow p-2 bg-white dark:bg-zinc-900 border-2 border-black rounded text-xs font-mono focus:outline-none text-black dark:text-white focus:ring-2 focus:ring-black dark:focus:ring-white"
-                            />
-                            <span className="p-2 border-2 border-black bg-zinc-100 dark:bg-zinc-800 text-[10px] font-mono font-bold flex items-center justify-center rounded text-black dark:text-white">
-                              .{compressImgResult.format.includes("/") ? compressImgResult.format.split("/")[1] : "dat"}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* DOWNLOAD BUTTON */}
-                        <button
-                          onClick={() => {
-                            saveAndDownload(
-                              compressImgResult.url,
-                              compressImgCustomName || compressImgResult.filename,
-                              compressImgFile.name,
-                              "image",
-                              compressImgFile.size,
-                              compressImgResult.size,
-                              compressImgResult.format
-                            );
-                          }}
-                          className="w-full py-2.5 bg-black hover:bg-zinc-800 text-white dark:bg-white dark:text-black dark:hover:bg-zinc-200 font-mono font-bold text-xs uppercase border-2 border-black rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-[2px_2px_0px_0px_#000000] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#000000]"
-                        >
-                          <Download className="w-4 h-4" />
-                          <span>DOWNLOAD CONVERTED ASSET</span>
-                        </button>
+                      <div className="p-4 overflow-auto flex items-center justify-center bg-white dark:bg-zinc-900 min-h-[300px]">
+                        <img
+                          src={compressImgPreviewUrl}
+                          alt="Preview Source"
+                          className="max-w-full max-h-[350px] object-contain border border-black p-1 bg-white shadow animate-fade-in"
+                        />
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-zinc-400 rounded-xl min-h-[300px] bg-zinc-50/50 dark:bg-zinc-950/50 overflow-hidden flex flex-col justify-center items-center p-6 text-center">
+                      <ImageIcon className="w-12 h-12 text-zinc-400 mb-2 animate-pulse" />
+                      <span className="block text-xs font-mono font-bold text-zinc-500 uppercase">
+                        [PREVIEW_STAGING]
+                      </span>
+                      <span className="text-[10px] text-zinc-400 font-mono uppercase mt-1">
+                        Awaiting source loading...
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* ADJUSTMENTS COLUMN (NOW SECOND/BOTTOM) */}
-                <div className="lg:col-span-5 bg-zinc-50 dark:bg-zinc-950 border-2 border-black rounded-xl p-6 space-y-6">
+                {/* COLUMN 2: PARAMETERS (Middle on desktop, first on mobile) */}
+                <div className="lg:col-span-4 lg:order-2 order-1 bg-zinc-50 dark:bg-zinc-950 border-2 border-black rounded-xl p-6 space-y-6">
                   <div className="flex items-center justify-between border-b border-black pb-3">
                     <h3 className="font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 text-black dark:text-white">
                       <FolderOpen className="w-4 h-4" /> PARAMETERS.CFG
                     </h3>
                     <button
-                      onClick={() => setCompressImgFile(null)}
+                      onClick={() => {
+                        setCompressImgFile(null);
+                        setCompressImgResult(null);
+                      }}
                       className="text-[10px] font-mono font-bold uppercase underline hover:text-red-500 cursor-pointer"
                     >
                       [CHANGE_FILE]
@@ -996,7 +1015,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* OPTION B: Exact numerical size entry */}
+                  {/* TARGET WEIGHT SLIDER */}
                   {(() => {
                     const maxImgKB = Math.max(10, Math.round(compressImgFile.size / 1024));
                     return (
@@ -1079,6 +1098,92 @@ export default function App() {
                     )}
                   </button>
                 </div>
+
+                {/* COLUMN 3: OUTPUT VIEWPORT (Right on desktop, third on mobile) */}
+                <div className="lg:col-span-4 lg:order-3 order-3 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6">
+                  <h3 className="font-mono font-bold text-xs uppercase tracking-wider border-b border-black pb-3 text-black dark:text-white">
+                    // VIEWPORT_STAGE.DAT
+                  </h3>
+
+                  {compressImgResult ? (
+                    <div className="border-2 border-dashed border-zinc-400 p-6 rounded-xl bg-zinc-50 dark:bg-zinc-950 space-y-4 animate-fade-in">
+                      <div className="flex items-center gap-2 text-xs font-mono font-bold text-green-600 dark:text-green-400">
+                        <Check className="w-4 h-4" />
+                        <span>OPTIMIZATION PIPELINE CONCLUDED SUCCESSFULLY!</span>
+                      </div>
+
+                      {/* Display final sizes */}
+                      <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                        <div className="bg-white dark:bg-black border border-black p-3 rounded-lg text-black dark:text-white">
+                          <span className="text-[9px] text-zinc-500 uppercase block font-bold mb-1">// BEFORE:</span>
+                          <span className="font-bold text-sm">{formatBytes(compressImgFile.size)}</span>
+                        </div>
+                        <div className="bg-white dark:bg-black border border-black p-3 rounded-lg text-black dark:text-white">
+                          <span className="text-[9px] text-zinc-500 uppercase block font-bold mb-1">// AFTER:</span>
+                          <span className="font-bold text-sm text-green-600 dark:text-green-400">
+                            {formatBytes(compressImgResult.size)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 border border-black bg-white dark:bg-black rounded-lg text-xs font-mono text-center text-black dark:text-white">
+                        REDUCED WEIGHT BY:{" "}
+                        <strong className="text-green-600 dark:text-green-400 text-sm block mt-1">
+                          {formatBytes(compressImgFile.size - compressImgResult.size)} (-
+                          {Math.round(((compressImgFile.size - compressImgResult.size) / compressImgFile.size) * 100)}%)
+                        </strong>
+                      </div>
+
+                      {/* RENAME OPTION */}
+                      <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                        <label className="block text-[11px] font-mono font-bold text-black dark:text-white uppercase">
+                          RENAME OPTIMIZED OUTPUT FILE:
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={compressImgCustomName}
+                            onChange={(e) => setCompressImgCustomName(e.target.value)}
+                            placeholder="Enter output filename (excluding extension)"
+                            className="flex-grow p-2 bg-white dark:bg-zinc-900 border-2 border-black rounded text-xs font-mono focus:outline-none text-black dark:text-white focus:ring-2 focus:ring-black dark:focus:ring-white"
+                          />
+                          <span className="p-2 border-2 border-black bg-zinc-100 dark:bg-zinc-800 text-[10px] font-mono font-bold flex items-center justify-center rounded text-black dark:text-white">
+                            .{compressImgResult.format.includes("/") ? compressImgResult.format.split("/")[1] : "dat"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* DOWNLOAD BUTTON */}
+                      <button
+                        onClick={() => {
+                          saveAndDownload(
+                            compressImgResult.url,
+                            compressImgCustomName || compressImgResult.filename,
+                            compressImgFile.name,
+                            "image",
+                            compressImgFile.size,
+                            compressImgResult.size,
+                            compressImgResult.format
+                          );
+                        }}
+                        className="w-full py-2.5 bg-black hover:bg-zinc-800 text-white dark:bg-white dark:text-black dark:hover:bg-zinc-200 font-mono font-bold text-xs uppercase border-2 border-black rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-[2px_2px_0px_0px_#000000] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#000000]"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>DOWNLOAD CONVERTED ASSET</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-zinc-400 rounded-lg min-h-[220px] bg-zinc-50/50 dark:bg-zinc-950/50 overflow-hidden flex flex-col justify-center items-center p-6 text-center">
+                      <ImageIcon className="w-12 h-12 text-zinc-400 mb-2 animate-pulse" />
+                      <span className="block text-xs font-mono font-bold text-zinc-500 uppercase">
+                        [COMPRESSION_STAGING]
+                      </span>
+                      <span className="text-[10px] text-zinc-400 font-mono uppercase mt-1">
+                        Awaiting compression trigger...
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -1087,13 +1192,16 @@ export default function App() {
         {/* VIEW 3: COMPRESS PDF SCREEN */}
         {currentView === "compress_pdf" && (
           <div className="space-y-6 animate-fade-in" id="compress-pdf-view">
-            <div className="border-b border-black pb-4">
-              <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
-                COMPRESS_PDF.PRG // DOCUMENT OPTIMIZER
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                Shrinks PDF streams, compresses object buffers, and flattens metadata headers.
-              </p>
+            <div className="border-b border-black pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
+                  COMPRESS_PDF.PRG // DOCUMENT OPTIMIZER
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+                  Shrinks PDF streams, compresses object buffers, and flattens metadata headers.
+                </p>
+              </div>
+              {renderAutoDeleteCountdown(compressPdfTimestamp)}
             </div>
 
             {!compressPdfFile ? (
@@ -1136,9 +1244,30 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* LEFT ADJUSTMENTS COLUMN */}
-                <div className="lg:col-span-5 bg-zinc-50 dark:bg-zinc-950 border-2 border-black rounded-xl p-6 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* COLUMN 1: SOURCE FILE PREVIEW/INFO (Left on desktop, second on mobile) */}
+                <div className="lg:col-span-4 lg:order-1 order-2 space-y-4">
+                  <div className="border-2 border-black rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-950 flex flex-col">
+                    <div className="bg-zinc-100 dark:bg-zinc-850 border-b-2 border-black px-4 py-2.5 flex items-center justify-between text-xs font-mono font-bold text-black dark:text-white">
+                      <span>👁️ SOURCE_FILE_INFO.DAT</span>
+                      <span className="text-[9px] text-zinc-500 font-normal uppercase">● QUEUED</span>
+                    </div>
+                    <div className="p-6 flex flex-col items-center justify-center text-center bg-white dark:bg-zinc-900 min-h-[300px]">
+                      <FileText className="w-16 h-16 text-zinc-400 mb-3 animate-pulse" />
+                      <span className="block text-xs font-mono font-bold text-black dark:text-white uppercase mb-1">
+                        PDF LOADED TO MEMORY
+                      </span>
+                      <div className="bg-zinc-50 dark:bg-zinc-950 border border-black p-2.5 rounded text-[10px] font-mono w-full text-left space-y-1">
+                        <div className="truncate"><span className="text-zinc-500">NAME:</span> <span className="text-black dark:text-white font-bold">{compressPdfFile.name}</span></div>
+                        <div><span className="text-zinc-500">SIZE:</span> <span className="text-black dark:text-white font-bold">{formatBytes(compressPdfFile.size)}</span></div>
+                        <div><span className="text-zinc-500">TYPE:</span> <span className="text-black dark:text-white font-bold">application/pdf</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* COLUMN 2: PARAMETERS (Middle on desktop, first on mobile) */}
+                <div className="lg:col-span-4 lg:order-2 order-1 bg-zinc-50 dark:bg-zinc-950 border-2 border-black rounded-xl p-6 space-y-6">
                   <div className="flex items-center justify-between border-b border-black pb-3">
                     <h3 className="font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 text-black dark:text-white">
                       <FolderOpen className="w-4 h-4" /> PARAMETERS.CFG
@@ -1149,18 +1278,6 @@ export default function App() {
                     >
                       [CHANGE_FILE]
                     </button>
-                  </div>
-
-                  {/* FILE INFO */}
-                  <div className="bg-white dark:bg-black border-2 border-black p-3.5 rounded-lg space-y-1 text-xs font-mono">
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">FILE_NAME:</span>
-                      <strong className="truncate max-w-[200px] text-black dark:text-white">{compressPdfFile.name}</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">FILE_SIZE:</span>
-                      <strong className="text-black dark:text-white">{formatBytes(compressPdfFile.size)}</strong>
-                    </div>
                   </div>
 
                   {/* TARGET WEIGHT */}
@@ -1230,26 +1347,14 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* RIGHT COLUMN */}
-                <div className="lg:col-span-7 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6">
+                {/* COLUMN 3: OUTPUT VIEWPORT (Right on desktop, third on mobile) */}
+                <div className="lg:col-span-4 lg:order-3 order-3 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6">
                   <h3 className="font-mono font-bold text-xs uppercase tracking-wider border-b border-black pb-3 text-black dark:text-white">
                     // VIEWPORT_STAGE.DAT
                   </h3>
 
                   <div className="space-y-6">
-                    {/* Main status box */}
-                    <div className="border-2 border-black rounded-lg min-h-[220px] bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center p-6 text-center">
-                      <FileText className="w-16 h-16 text-zinc-400 mb-3" />
-                      <span className="block text-xs font-mono font-bold text-black dark:text-white uppercase mb-1">
-                        PDF FILE LOADED INTO SYSTEM MEMORY
-                      </span>
-                      <p className="text-[10px] text-zinc-500 font-mono uppercase">
-                        Binary stream: application/pdf ({formatBytes(compressPdfFile.size)})
-                      </p>
-                    </div>
-
-                    {/* Converted Results & Download details */}
-                    {compressPdfResult && (
+                    {compressPdfResult ? (
                       <div className="border-2 border-dashed border-zinc-400 p-4 rounded-lg bg-zinc-50 dark:bg-zinc-950 space-y-4 animate-fade-in">
                         <div className="flex items-center gap-2 text-xs font-mono font-bold text-green-600 dark:text-green-400">
                           <Check className="w-4 h-4" />
@@ -1316,6 +1421,16 @@ export default function App() {
                           <span>DOWNLOAD CONVERTED ASSET</span>
                         </button>
                       </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-zinc-400 rounded-lg min-h-[220px] bg-zinc-50/50 dark:bg-zinc-950/50 overflow-hidden flex flex-col justify-center items-center p-6 text-center">
+                        <Zap className="w-12 h-12 text-zinc-400 mb-2 animate-pulse" />
+                        <span className="block text-xs font-mono font-bold text-zinc-500 uppercase">
+                          [OPTIMIZATION_STAGING]
+                        </span>
+                        <span className="text-[10px] text-zinc-400 font-mono uppercase mt-1">
+                          Awaiting optimization trigger...
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1327,13 +1442,16 @@ export default function App() {
         {/* VIEW 4: CONVERT IMAGE SCREEN */}
         {currentView === "convert_img" && (
           <div className="space-y-6 animate-fade-in" id="convert-img-view">
-            <div className="border-b border-black pb-4">
-              <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
-                CONVERT_IMG.PRG // IMAGE FORMAT CONVERTER
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                Transcode a single image to JPG, JPEG, or PNG format locally.
-              </p>
+            <div className="border-b border-black pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
+                  CONVERT_IMG.PRG // IMAGE FORMAT CONVERTER
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+                  Transcode a single image to JPG, JPEG, or PNG format locally.
+                </p>
+              </div>
+              {renderAutoDeleteCountdown(convertImgTimestamp)}
             </div>
 
             {convertImgFiles.length === 0 ? (
@@ -1371,12 +1489,41 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* LEFT ADJUSTMENTS COLUMN */}
-                <div className="lg:col-span-5 bg-zinc-50 dark:bg-zinc-950 border-2 border-black rounded-xl p-6 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* COLUMN 1: SOURCE FILE PREVIEW (Left on desktop, second on mobile) */}
+                <div className="lg:col-span-4 lg:order-1 order-2 space-y-4">
+                  {convertImgPreviewUrl ? (
+                    <div className="border-2 border-black rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-950 flex flex-col">
+                      <div className="bg-zinc-100 dark:bg-zinc-850 border-b-2 border-black px-4 py-2.5 flex items-center justify-between text-xs font-mono font-bold text-black dark:text-white">
+                        <span>👁️ SOURCE_FILE_PREVIEW.DAT</span>
+                        <span className="text-[9px] text-zinc-500 font-normal uppercase">● QUEUED</span>
+                      </div>
+                      <div className="p-4 overflow-auto flex items-center justify-center bg-white dark:bg-zinc-900 min-h-[300px]">
+                        <img
+                          src={convertImgPreviewUrl}
+                          alt="Preview Source"
+                          className="max-w-full max-h-[350px] object-contain border border-black p-1 bg-white shadow animate-fade-in"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-zinc-400 rounded-xl min-h-[300px] bg-zinc-50/50 dark:bg-zinc-950/50 overflow-hidden flex flex-col justify-center items-center p-6 text-center">
+                      <ImageIcon className="w-12 h-12 text-zinc-400 mb-2 animate-pulse" />
+                      <span className="block text-xs font-mono font-bold text-zinc-500 uppercase">
+                        [PREVIEW_STAGING]
+                      </span>
+                      <span className="text-[10px] text-zinc-400 font-mono uppercase mt-1">
+                        Awaiting source loading...
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* COLUMN 2: PARAMETERS (Middle on desktop, first on mobile) */}
+                <div className="lg:col-span-4 lg:order-2 order-1 bg-zinc-50 dark:bg-zinc-950 border-2 border-black rounded-xl p-6 space-y-6">
                   <div className="flex items-center justify-between border-b border-black pb-3">
                     <h3 className="font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 text-black dark:text-white">
-                      <FolderOpen className="w-4 h-4" /> PARAMETERS.CFG
+                       <FolderOpen className="w-4 h-4" /> PARAMETERS.CFG
                     </h3>
                     <button
                       onClick={() => {
@@ -1495,90 +1642,14 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* RIGHT COLUMN */}
-                <div className="lg:col-span-7 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6">
+                {/* COLUMN 3: OUTPUT VIEWPORT (Right on desktop, third on mobile) */}
+                <div className="lg:col-span-4 lg:order-3 order-3 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6">
                   <h3 className="font-mono font-bold text-xs uppercase tracking-wider border-b border-black pb-3 text-black dark:text-white">
                     // VIEWPORT_STAGE.DAT
                   </h3>
 
-                  {convertImgFiles.length > 0 && convertImgPreviewUrl ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Left Pane: Source Preview */}
-                      <div className="border-2 border-black rounded-lg min-h-[220px] max-h-[350px] bg-zinc-50 dark:bg-zinc-950 overflow-hidden flex flex-col relative">
-                        <div className="bg-zinc-100 dark:bg-zinc-800 border-b-2 border-black px-4 py-2 flex items-center justify-between text-xs font-mono font-bold text-black dark:text-white">
-                          <span>👁️ SOURCE_FILE_PREVIEW.DAT</span>
-                          <span className="text-[9px] text-zinc-500 font-normal uppercase">● QUEUED</span>
-                        </div>
-                        <div className="flex-grow p-4 overflow-auto flex items-center justify-center bg-zinc-100/30 dark:bg-zinc-900/30">
-                          <img
-                            src={convertImgPreviewUrl}
-                            alt="Preview Source"
-                            style={{ transform: `rotate(${convertImgRotation}deg)` }}
-                            className="max-w-full max-h-[180px] object-contain border border-black p-1 bg-white shadow transition-transform duration-300 ease-in-out"
-                          />
-                        </div>
-                        <div className="bg-zinc-100 dark:bg-zinc-800 border-t-2 border-black px-3 py-2 flex items-center justify-center gap-3">
-                          <button
-                            onClick={() => setConvertImgRotation(prev => (prev - 90) % 360)}
-                            className="px-2.5 py-1.5 bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-[10px] font-mono font-bold border-2 border-black rounded shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] cursor-pointer text-black dark:text-white active:translate-y-0.5 active:shadow-none flex items-center gap-1.5 transition-all"
-                            title="Rotate 90 degrees counter-clockwise"
-                          >
-                            <RotateCcw className="w-3 h-3" />
-                            <span>ROTATE CCW (-90°)</span>
-                          </button>
-                          <button
-                            onClick={() => setConvertImgRotation(prev => (prev + 90) % 360)}
-                            className="px-2.5 py-1.5 bg-white hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-[10px] font-mono font-bold border-2 border-black rounded shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] cursor-pointer text-black dark:text-white active:translate-y-0.5 active:shadow-none flex items-center gap-1.5 transition-all"
-                            title="Rotate 90 degrees clockwise"
-                          >
-                            <RotateCw className="w-3 h-3" />
-                            <span>ROTATE CW (+90°)</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Right Pane: Converted Result or Waiting Placeholder */}
-                      {convertImgResult ? (
-                        <div className="border-2 border-black rounded-lg min-h-[220px] max-h-[350px] bg-zinc-50 dark:bg-zinc-950 overflow-hidden flex flex-col relative">
-                          <div className="bg-zinc-100 dark:bg-zinc-800 border-b-2 border-black px-4 py-2 flex items-center justify-between text-xs font-mono font-bold text-black dark:text-white">
-                            <span>👁️ CONVERTED_IMAGE_PREVIEW.DAT</span>
-                            <span className="text-[9px] text-green-600 dark:text-green-400 font-normal uppercase animate-pulse">● CONVERTED</span>
-                          </div>
-                          <div className="flex-grow p-4 overflow-auto flex items-center justify-center">
-                            <img
-                              src={convertImgResult.url}
-                              alt="Converted preview"
-                              className="max-w-full max-h-[250px] object-contain border border-black shadow"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="border-2 border-dashed border-zinc-400 rounded-lg min-h-[220px] max-h-[350px] bg-zinc-50/50 dark:bg-zinc-950/50 overflow-hidden flex flex-col justify-center items-center p-6 text-center">
-                          <RefreshCw className="w-8 h-8 text-zinc-400 mb-2 animate-spin-slow" />
-                          <span className="block text-[11px] font-mono font-bold text-zinc-500 uppercase">
-                            [CONVERTED_PREVIEW.DAT]
-                          </span>
-                          <span className="text-[9px] text-zinc-400 font-mono uppercase mt-1">
-                            Awaiting compilation trigger...
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="border-2 border-black rounded-lg min-h-[220px] bg-zinc-50 dark:bg-zinc-950 p-6 text-center flex flex-col items-center justify-center">
-                      <ImageIcon className="w-16 h-16 text-zinc-400 mb-3 animate-pulse" />
-                      <span className="block text-xs font-mono font-bold text-black dark:text-white uppercase mb-1">
-                        PIPELINE ACTIVE & WAITING
-                      </span>
-                      <p className="text-[10px] text-zinc-500 font-mono uppercase">
-                        Upload an image on the left and select target format to convert it.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* OUTPUT RESULTS */}
-                  {convertImgResult && (
-                    <div className="border-2 border-dashed border-zinc-400 p-4 rounded-lg bg-zinc-50 dark:bg-zinc-950 space-y-4 animate-fade-in">
+                  {convertImgResult ? (
+                    <div className="border-2 border-dashed border-zinc-400 p-6 rounded-xl bg-zinc-50 dark:bg-zinc-950 space-y-4 animate-fade-in">
                       <div className="flex items-center gap-2 text-xs font-mono font-bold text-green-600 dark:text-green-400">
                         <Check className="w-4 h-4" />
                         <span>CONVERSION SUCCESSFULLY WRITTEN TO LOCAL BLOCKS.</span>
@@ -1650,6 +1721,16 @@ export default function App() {
                         </button>
                       </div>
                     </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-zinc-400 rounded-lg min-h-[220px] bg-zinc-50/50 dark:bg-zinc-950/50 overflow-hidden flex flex-col justify-center items-center p-6 text-center">
+                      <RefreshCw className="w-12 h-12 text-zinc-400 mb-2 animate-pulse" />
+                      <span className="block text-xs font-mono font-bold text-zinc-500 uppercase">
+                        [CONVERSION_STAGING]
+                      </span>
+                      <span className="text-[10px] text-zinc-400 font-mono uppercase mt-1">
+                        Awaiting conversion trigger...
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1660,13 +1741,16 @@ export default function App() {
         {/* VIEW 5: MERGE PDF SCREEN */}
         {currentView === "merge_pdf" && (
           <div className="space-y-6 animate-fade-in" id="merge-pdf-view">
-            <div className="border-b border-black pb-4">
-              <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
-                MERGE_PDF.PRG // DOCUMENT MERGER
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                Merges multiple independent PDF documents into a clean compiled document stream in the correct physical sequence.
-              </p>
+            <div className="border-b border-black pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
+                  MERGE_PDF.PRG // DOCUMENT MERGER
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+                  Merges multiple independent PDF documents into a clean compiled document stream in the correct physical sequence.
+                </p>
+              </div>
+              {renderAutoDeleteCountdown(mergePdfTimestamp)}
             </div>
 
             {mergePdfFiles.length === 0 ? (
@@ -1705,9 +1789,80 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* LEFT ADJUSTMENTS COLUMN */}
-                <div className="lg:col-span-5 bg-zinc-50 dark:bg-zinc-950 border-2 border-black rounded-xl p-6 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* COLUMN 1: QUEUED DOCUMENTS LIST (Left on desktop, second on mobile) */}
+                <div className="lg:col-span-4 lg:order-1 order-2 space-y-4">
+                  <div className="border-2 border-black rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-950 flex flex-col">
+                    <div className="bg-zinc-100 dark:bg-zinc-850 border-b-2 border-black px-4 py-2.5 flex items-center justify-between text-xs font-mono font-bold text-black dark:text-white">
+                      <span>👁️ QUEUED_DOCUMENTS.DAT ({mergePdfFiles.length})</span>
+                      <button
+                        onClick={() => mergePdfInputRef.current?.click()}
+                        className="text-[10px] font-mono font-bold border border-black bg-white hover:bg-black hover:text-white px-2 py-0.5 uppercase cursor-pointer text-black dark:text-black"
+                      >
+                        + ADD
+                      </button>
+                    </div>
+                    
+                    <div className="p-4 space-y-3 bg-white dark:bg-zinc-900 min-h-[300px]">
+                      <div className="max-h-[320px] overflow-y-auto border-2 border-black rounded-lg divide-y divide-black bg-zinc-50 dark:bg-zinc-950">
+                        {mergePdfFiles.map((file, idx) => (
+                          <div key={idx} className="p-2.5 flex items-center justify-between text-[11px] font-mono hover:bg-zinc-100 dark:hover:bg-zinc-900">
+                            <div className="flex items-center gap-1.5 truncate pr-2">
+                              <span className="font-bold text-[10px] text-zinc-400">[{idx + 1}]</span>
+                              <span className="truncate text-black dark:text-white" title={file.name}>{file.name}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-1 shrink-0">
+                              {/* Move Up */}
+                              <button
+                                disabled={idx === 0}
+                                onClick={() => {
+                                  const list = [...mergePdfFiles];
+                                  const tmp = list[idx];
+                                  list[idx] = list[idx - 1];
+                                  list[idx - 1] = tmp;
+                                  setMergePdfFiles(list);
+                                }}
+                                className="p-1 border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-850 rounded text-zinc-700 dark:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95 flex items-center justify-center"
+                                title="Move Up"
+                              >
+                                <ArrowUp className="w-3 h-3" />
+                              </button>
+                              {/* Move Down */}
+                              <button
+                                disabled={idx === mergePdfFiles.length - 1}
+                                onClick={() => {
+                                  const list = [...mergePdfFiles];
+                                  const tmp = list[idx];
+                                  list[idx] = list[idx + 1];
+                                  list[idx + 1] = tmp;
+                                  setMergePdfFiles(list);
+                                }}
+                                className="p-1 border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-850 rounded text-zinc-700 dark:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95 flex items-center justify-center"
+                                title="Move Down"
+                              >
+                                <ArrowDown className="w-3 h-3" />
+                              </button>
+                              {/* Delete Page */}
+                              <button
+                                onClick={() => {
+                                  setMergePdfFiles(prev => prev.filter((_, fIdx) => fIdx !== idx));
+                                }}
+                                className="p-1 border border-red-350 bg-red-50 hover:bg-red-100 text-red-600 rounded cursor-pointer transition-all active:scale-95 flex items-center justify-center"
+                                title="Delete Page"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* COLUMN 2: PARAMETERS (Middle on desktop, first on mobile) */}
+                <div className="lg:col-span-4 lg:order-2 order-1 bg-zinc-50 dark:bg-zinc-950 border-2 border-black rounded-xl p-6 space-y-6">
                   <div className="flex items-center justify-between border-b border-black pb-3">
                     <h3 className="font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 text-black dark:text-white">
                       <FolderOpen className="w-4 h-4" /> PARAMETERS.CFG
@@ -1720,84 +1875,32 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* ACTIVE FILE LIST */}
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <label className="block text-xs font-mono font-bold text-zinc-500 uppercase">
-                        QUEUED DOCUMENTS ({mergePdfFiles.length}):
-                      </label>
-                      <button
-                        onClick={() => mergePdfInputRef.current?.click()}
-                        className="text-[10px] font-mono font-bold border border-black bg-white hover:bg-black hover:text-white px-2 py-0.5 uppercase cursor-pointer"
-                      >
-                        + Add PDFs
-                      </button>
-                      <input
-                        type="file"
-                        ref={mergePdfInputRef}
-                        onChange={(e) => {
-                          if (e.target.files) setupMergePdfFiles(e.target.files);
-                        }}
-                        accept="application/pdf"
-                        multiple
-                        className="hidden"
-                      />
-                    </div>
-
-                    <div className="max-h-[220px] overflow-y-auto border-2 border-black rounded-lg divide-y divide-black bg-white dark:bg-black">
-                      {mergePdfFiles.map((file, idx) => (
-                        <div key={idx} className="p-2.5 flex items-center justify-between text-xs font-mono hover:bg-zinc-50 dark:hover:bg-zinc-900">
-                          <div className="flex items-center gap-2 truncate pr-2">
-                            <span className="font-bold text-[10px] text-zinc-400">[{idx + 1}]</span>
-                            <span className="truncate text-black dark:text-white" title={file.name}>{file.name}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {/* Move Up */}
-                            <button
-                              disabled={idx === 0}
-                              onClick={() => {
-                                const list = [...mergePdfFiles];
-                                const tmp = list[idx];
-                                list[idx] = list[idx - 1];
-                                list[idx - 1] = tmp;
-                                setMergePdfFiles(list);
-                              }}
-                              className="p-1.5 border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-md text-zinc-700 dark:text-zinc-300 disabled:opacity-30 disabled:hover:bg-zinc-100 dark:disabled:hover:bg-zinc-800 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95 flex items-center justify-center"
-                              title="Move Up"
-                            >
-                              <ArrowUp className="w-3.5 h-3.5" />
-                            </button>
-                            {/* Move Down */}
-                            <button
-                              disabled={idx === mergePdfFiles.length - 1}
-                              onClick={() => {
-                                const list = [...mergePdfFiles];
-                                const tmp = list[idx];
-                                list[idx] = list[idx + 1];
-                                list[idx + 1] = tmp;
-                                setMergePdfFiles(list);
-                              }}
-                              className="p-1.5 border border-zinc-300 dark:border-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-md text-zinc-700 dark:text-zinc-300 disabled:opacity-30 disabled:hover:bg-zinc-100 dark:disabled:hover:bg-zinc-800 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95 flex items-center justify-center"
-                              title="Move Down"
-                            >
-                              <ArrowDown className="w-3.5 h-3.5" />
-                            </button>
-                            {/* Delete Page */}
-                            <button
-                              onClick={() => {
-                                setMergePdfFiles(prev => prev.filter((_, fIdx) => fIdx !== idx));
-                              }}
-                              className="p-1.5 border border-red-300 dark:border-red-900 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 rounded-md cursor-pointer transition-all active:scale-95 flex items-center justify-center"
-                              title="Delete Page"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                    <label className="block text-xs font-mono font-bold text-zinc-500 uppercase">
+                      STREAM CONSOLIDATION CONFIG:
+                    </label>
+                    <div className="bg-white dark:bg-black border border-black p-3 rounded-lg text-xs font-mono text-black dark:text-white space-y-2">
+                      <div className="flex justify-between">
+                        <span>QUEUED FILES:</span>
+                        <strong>{mergePdfFiles.length} files</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>TOTAL COMBINED WT:</span>
+                        <strong>{formatBytes(mergePdfFiles.reduce((acc, f) => acc + f.size, 0))}</strong>
+                      </div>
                     </div>
                   </div>
+
+                  <input
+                    type="file"
+                    ref={mergePdfInputRef}
+                    onChange={(e) => {
+                      if (e.target.files) setupMergePdfFiles(e.target.files);
+                    }}
+                    accept="application/pdf"
+                    multiple
+                    className="hidden"
+                  />
 
                   {/* RUN ACTION */}
                   <button
@@ -1819,26 +1922,96 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* RIGHT COLUMN */}
-                <div className="lg:col-span-7 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6">
+                {/* COLUMN 3: OUTPUT VIEWPORT (Right on desktop, third on mobile) */}
+                <div className="lg:col-span-4 lg:order-3 order-3 bg-white dark:bg-black border-2 border-black rounded-xl p-6 space-y-6">
                   <h3 className="font-mono font-bold text-xs uppercase tracking-wider border-b border-black pb-3 text-black dark:text-white">
                     // VIEWPORT_STAGE.DAT
                   </h3>
 
                   {mergePdfResult ? (
-                    <div className="border-2 border-black rounded-lg h-[400px] bg-zinc-50 dark:bg-zinc-950 overflow-hidden flex flex-col relative">
-                      <div className="bg-zinc-100 dark:bg-zinc-800 border-b-2 border-black px-4 py-2 flex items-center justify-between text-xs font-mono font-bold text-black dark:text-white">
-                        <span>👁️ MERGED_PDF_PREVIEW.DAT</span>
-                        <span className="text-[9px] text-green-600 dark:text-green-400 font-normal uppercase animate-pulse">● SYNTHESIZED</span>
+                    <div className="space-y-4">
+                      <div className="border-2 border-black rounded-lg h-[280px] bg-zinc-50 dark:bg-zinc-950 overflow-hidden flex flex-col relative">
+                        <div className="bg-zinc-100 dark:bg-zinc-800 border-b-2 border-black px-4 py-2 flex items-center justify-between text-xs font-mono font-bold text-black dark:text-white">
+                          <span>👁️ MERGED_PDF_PREVIEW.DAT</span>
+                          <span className="text-[9px] text-green-600 dark:text-green-400 font-normal uppercase animate-pulse">● SYNTHESIZED</span>
+                        </div>
+                        <iframe
+                          src={`${mergePdfResult.url}#toolbar=0`}
+                          className="w-full flex-grow border-0 bg-white"
+                          title="Merged PDF Preview"
+                        />
                       </div>
-                      <iframe
-                        src={`${mergePdfResult.url}#toolbar=0`}
-                        className="w-full flex-grow border-0 bg-white"
-                        title="Merged PDF Preview"
-                      />
+
+                      <div className="border-2 border-dashed border-zinc-400 p-4 rounded-lg bg-zinc-50 dark:bg-zinc-950 space-y-4 animate-fade-in">
+                        <div className="flex items-center gap-2 text-xs font-mono font-bold text-green-600 dark:text-green-400">
+                          <Check className="w-4 h-4" />
+                          <span>CONSOLIDATION PIPELINE CONCLUDED SUCCESSFULLY!</span>
+                        </div>
+
+                        <div className="bg-white dark:bg-black border border-black p-3.5 rounded-lg space-y-1 text-xs font-mono text-black dark:text-white">
+                          <div className="flex justify-between">
+                            <span>TOTAL MERGED DOCUMENTS:</span>
+                            <strong>{mergePdfFiles.length}</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>FINAL PAYLOAD SIZE:</span>
+                            <strong>{formatBytes(mergePdfResult.size)}</strong>
+                          </div>
+                        </div>
+
+                        {/* POST-CONVERSION RENAME */}
+                        <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                          <label className="block text-[11px] font-mono font-bold text-black dark:text-white uppercase">
+                            RENAME CONSOLIDATED OUT-NODE:
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={mergePdfCustomName}
+                              onChange={(e) => setMergePdfCustomName(e.target.value)}
+                              placeholder="Enter output name"
+                              className="flex-grow p-2 bg-white dark:bg-black text-black dark:text-white border-2 border-black rounded text-xs font-mono focus:outline-none"
+                            />
+                            <span className="p-2 border-2 border-black bg-zinc-100 dark:bg-zinc-800 text-[10px] text-black dark:text-white font-mono font-bold flex items-center justify-center rounded">
+                              .pdf
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* DOWNLOAD & CONVERT ANOTHER FILE BUTTONS */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <button
+                            onClick={() => {
+                              saveAndDownload(
+                                mergePdfResult.url,
+                                mergePdfCustomName || mergePdfResult.filename,
+                                mergePdfFiles[0].name,
+                                "pdf",
+                                mergePdfFiles.reduce((s, f) => s + f.size, 0),
+                                mergePdfResult.size,
+                                "application/pdf"
+                              );
+                            }}
+                            className="w-full py-2.5 bg-black hover:bg-zinc-800 text-white dark:bg-white dark:text-black dark:hover:bg-zinc-200 font-mono font-bold text-xs uppercase border-2 border-black rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-[2px_2px_0px_0px_#000000] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#000000]"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span>DOWNLOAD</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setMergePdfFiles([]);
+                              setMergePdfResult(null);
+                            }}
+                            className="w-full py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-black dark:text-white font-mono font-bold text-xs uppercase border-2 border-black rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-[2px_2px_0px_0px_#000000] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#000000]"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                            <span>CLEAR</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <div className="border-2 border-black rounded-lg min-h-[220px] bg-zinc-50 dark:bg-zinc-950 p-6 text-center flex flex-col items-center justify-center">
+                    <div className="border-2 border-dashed border-zinc-400 rounded-lg min-h-[220px] bg-zinc-50/50 dark:bg-zinc-950/50 p-6 text-center flex flex-col items-center justify-center">
                       <Files className="w-16 h-16 text-zinc-400 mb-3 animate-pulse" />
                       <span className="block text-xs font-mono font-bold text-black dark:text-white uppercase mb-1">
                         MULTI-STREAM PIPELINE READY
@@ -1846,81 +2019,6 @@ export default function App() {
                       <p className="text-[10px] text-zinc-500 font-mono uppercase">
                         Ready to synthesize {mergePdfFiles.length} catalog streams into a clean unified payload.
                       </p>
-                    </div>
-                  )}
-
-                  {/* OUTPUT RESULTS */}
-                  {mergePdfResult && (
-                    <div className="border-2 border-dashed border-zinc-400 p-4 rounded-lg bg-zinc-50 dark:bg-zinc-950 space-y-4 animate-fade-in">
-                      <div className="flex items-center gap-2 text-xs font-mono font-bold text-green-600 dark:text-green-400">
-                        <Check className="w-4 h-4" />
-                        <span>CONSOLIDATION PIPELINE CONCLUDED SUCCESSFULLY!</span>
-                      </div>
-
-                      <div className="bg-white dark:bg-black border border-black p-3.5 rounded-lg space-y-1 text-xs font-mono text-black dark:text-white">
-                        <div className="flex justify-between">
-                          <span>TOTAL MERGED DOCUMENTS:</span>
-                          <strong>{mergePdfFiles.length}</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>FINAL PAYLOAD SIZE:</span>
-                          <strong>{formatBytes(mergePdfResult.size)}</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>FILE FORMAT DESIGNATION:</span>
-                          <strong>application/pdf</strong>
-                        </div>
-                      </div>
-
-                      {/* POST-CONVERSION RENAME */}
-                      <div className="space-y-1.5 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                        <label className="block text-[11px] font-mono font-bold text-black dark:text-white uppercase">
-                          RENAME CONSOLIDATED OUT-NODE:
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={mergePdfCustomName}
-                            onChange={(e) => setMergePdfCustomName(e.target.value)}
-                            placeholder="Enter output name"
-                            className="flex-grow p-2 bg-white dark:bg-black text-black dark:text-white border-2 border-black rounded text-xs font-mono focus:outline-none"
-                          />
-                          <span className="p-2 border-2 border-black bg-zinc-100 dark:bg-zinc-800 text-[10px] text-black dark:text-white font-mono font-bold flex items-center justify-center rounded">
-                            .pdf
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* DOWNLOAD & CONVERT ANOTHER FILE BUTTONS */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <button
-                          onClick={() => {
-                            saveAndDownload(
-                              mergePdfResult.url,
-                              mergePdfCustomName || mergePdfResult.filename,
-                              mergePdfFiles[0].name,
-                              "pdf",
-                              mergePdfFiles.reduce((s, f) => s + f.size, 0),
-                              mergePdfResult.size,
-                              "application/pdf"
-                            );
-                          }}
-                          className="w-full py-2.5 bg-black hover:bg-zinc-800 text-white dark:bg-white dark:text-black dark:hover:bg-zinc-200 font-mono font-bold text-xs uppercase border-2 border-black rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-[2px_2px_0px_0px_#000000] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#000000]"
-                        >
-                          <Download className="w-4 h-4" />
-                          <span>DOWNLOAD CONVERTED ASSET</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setMergePdfFiles([]);
-                            setMergePdfResult(null);
-                          }}
-                          className="w-full py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-black dark:text-white font-mono font-bold text-xs uppercase border-2 border-black rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-[2px_2px_0px_0px_#000000] active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_#000000]"
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                          <span>CONVERT ANOTHER FILE</span>
-                        </button>
-                      </div>
                     </div>
                   )}
                 </div>
@@ -1932,13 +2030,16 @@ export default function App() {
         {/* VIEW 6: IMAGE TO PDF SCREEN */}
         {currentView === "image_to_pdf" && (
           <div className="space-y-6 animate-fade-in" id="image-to-pdf-view">
-            <div className="border-b border-black pb-4">
-              <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
-                IMAGE_TO_PDF.PRG // IMAGE COMPILER
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                Compile single or multiple images into a clean, custom-aligned PDF document completely offline in your client sandbox.
-              </p>
+            <div className="border-b border-black pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold uppercase tracking-tight text-black dark:text-white font-sans">
+                  IMAGE_TO_PDF.PRG // IMAGE COMPILER
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+                  Compile single or multiple images into a clean, custom-aligned PDF document completely offline in your client sandbox.
+                </p>
+              </div>
+              {renderAutoDeleteCountdown(imageToPdfTimestamp)}
             </div>
 
             {imageToPdfFiles.length === 0 ? (
